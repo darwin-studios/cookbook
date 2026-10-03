@@ -1,21 +1,36 @@
 import { choices, search } from '../lib/darwin.mjs';
 
 const scenarios = [
-  { name: 'Assistant diagnostic', query: 'MCP server health diagnostic whoami tool', minimumAgents: 1 },
-  { name: 'Application readiness', query: 'Edenspiekermann jobs OpenAPI list current job openings', minimumAgents: 1 },
-  { name: 'Shopping concierge', query: 'shopping product search agent', minimumAgents: 2 },
-  { name: 'Accessibility review', query: 'WCAG accessibility audit website', minimumAgents: 1 },
-  { name: 'Security review', query: 'security audit of website URL', minimumAgents: 1 },
+  {
+    name: 'Assistant diagnostic', query: 'MCP server health diagnostic whoami tool', minimumAgents: 1,
+    relevant: (item) => /whoami|health diagnostic/i.test(`${item.name} ${item.description}`),
+  },
+  {
+    name: 'Application readiness', query: 'Edenspiekermann jobs OpenAPI list current job openings', minimumAgents: 1,
+    relevant: (item) => /Edenspiekermann/i.test(item.agentName) && /list current job openings/i.test(item.name),
+  },
+  {
+    name: 'Shopping concierge', query: 'shopping product search agent', minimumAgents: 2,
+    relevant: (item) => /shopping|product.search|quote|offer|seller/i.test(`${item.name} ${item.agentName}`),
+  },
+  {
+    name: 'Accessibility review', query: 'WCAG accessibility audit website', minimumAgents: 1,
+    relevant: (item) => /accessibility|wcag/i.test(`${item.name} ${item.description}`),
+  },
+  {
+    name: 'Security review', query: 'security audit of website URL', minimumAgents: 1,
+    relevant: (item) => /security|threat|vulnerabilit|security headers/i.test(`${item.name} ${item.description}`),
+  },
 ];
 let failed = false;
 const readyByScenario = new Map();
-for (const { name, query, minimumAgents } of scenarios) {
+for (const { name, query, minimumAgents, relevant } of scenarios) {
   const started = performance.now();
   try {
     const found = await search(query, { numResults: 5 });
     const ranked = choices(found);
     if (!Array.isArray(found.agents) || !Array.isArray(found.results)) throw new Error('Invalid Search response shape');
-    const readyAgents = new Set(ranked.filter((item) => item.canStartThread && item.readiness === 'ready').map((item) => item.agent));
+    const readyAgents = new Set(ranked.filter((item) => relevant(item) && item.canStartThread && item.readiness === 'ready').map((item) => item.agent));
     readyByScenario.set(name, readyAgents);
     if (readyAgents.size < minimumAgents) failed = true;
     console.log(`${name}: ${found.outcome}, ${ranked.length} ranked, ${readyAgents.size}/${minimumAgents} executable agents, ${Math.round(performance.now() - started)} ms`);
