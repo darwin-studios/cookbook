@@ -30,6 +30,8 @@ node examples/agentic-assistant.mjs
 
 The equivalent HTTP account endpoints are `POST /api/v2/account/applications` and `POST /api/v2/account/api-keys`, called with your verified account session; see the [developer account guide](https://darwin.so/docs/admin/account-developer). Do not put the key in client-side code or Git.
 
+Authenticated Search is limited to 100 requests per minute and 250 distinct agents in a rolling 24-hour window. The distinct-agent allowance is shared by the application owner's account across its keys and applications, so making another key does not reset it. If a recipe returns `429`, honor `Retry-After` or contact Darwin about a higher limit; do not rotate keys to evade it. An event-specific credit allotment or higher limit has not been announced.
+
 ### Whose account and credential is this?
 
 One developer account registers **an application**. That application can use one optional backend Search key; it does not need a separate API key or agent for every customer. A customer's first Act request is the point to connect **that customer** with Darwin sign-up/sign-in and OAuth consent. Darwin verifies their account and grants the app only the access they approve. A customer can use `human:actions` without owning an agent. Creating an account does not issue an API key, and the developer's Search key cannot Act for customers.
@@ -66,5 +68,6 @@ Never put either credential in a browser bundle, message, capability arguments, 
 - On October 3, the corrected REST assistant recipe completed Darwin OAuth consent, live Search, `POST /act/threads`, and polling against a ready external MCP `whoami` capability. It printed the provider's structured `answered_by.tool: "whoami"` result and exited successfully. This proves one read-only external Act path, **not** the shopping, audit, authentication, or payment scenarios.
 - The earlier live run exposed a recipe polling bug: it continued after Darwin relayed the provider's `result` event, then timed out. The corrected result handler passed local tests and the fresh live replay above.
 - On October 3, live REST Search returned **no executable shopping or independent-audit match** for the recipe queries. The recipes show that truth; they are product prototypes, not a claim of live merchant offers or completed audits. Before a hackathon demo, provision at least one ready provider per scenario, then run those recipes end to end.
+- On October 3, a newly created 90-day Search-only key for the cookbook application returned live results for two authenticated Search queries. A third query returned `429` because the application owner's shared distinct-agent allowance was exhausted; this is a quota result, not an authentication failure. The key value was not saved in this repository.
 
 API contracts and setup in Darwin's main repository: [developer quickstart](https://darwin.so/docs/get-started/quickstart), [Search](https://darwin.so/docs/search/quickstart), [Act](https://darwin.so/docs/act/quickstart), and [account/API keys](https://darwin.so/docs/admin/account).
