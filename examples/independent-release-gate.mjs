@@ -28,6 +28,9 @@ try {
   console.log('\nRelease evidence — no simulated audit verdicts or automatic deployment.');
   for (const { label, outcome } of outcomes) showOutcome(label, outcome);
   if (!outcomes.length) console.log('No reviews ran. Do not treat this release as audited.');
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
 } finally {
   io.close();
 }

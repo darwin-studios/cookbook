@@ -29,6 +29,9 @@ try {
   console.log('\nOffer comparison — only actual external responses appear below.');
   for (const { choice, outcome } of outcomes) showOutcome(choice.agentName, outcome);
   console.log('This starter does not call Pay or auto-confirm checkout. Review any later payment request separately.');
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
 } finally {
   io.close();
 }
