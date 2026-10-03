@@ -4,8 +4,8 @@ import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 
 const recipe = process.argv[2];
-if (!recipe || !['agentic-assistant', 'shopping-concierge', 'independent-release-gate'].includes(recipe)) {
-  console.error('Usage: node scripts/run-with-oauth.mjs <agentic-assistant|shopping-concierge|independent-release-gate>');
+if (!recipe || !['agentic-assistant', 'shopping-concierge', 'independent-release-gate', 'application-readiness'].includes(recipe)) {
+  console.error('Usage: node scripts/run-with-oauth.mjs <agentic-assistant|shopping-concierge|independent-release-gate|application-readiness>');
   process.exit(2);
 }
 
