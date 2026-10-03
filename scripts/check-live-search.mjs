@@ -4,8 +4,8 @@ const scenarios = [
   ['Assistant diagnostic', 'MCP server health diagnostic whoami tool'],
   ['Application readiness', 'Edenspiekermann jobs OpenAPI list current job openings'],
   ['Shopping concierge', 'shopping product search agent'],
-  ['Accessibility review', 'Independent accessibility audit agent for a software release'],
-  ['Security review', 'Independent application security review agent for a software release'],
+  ['Accessibility review', 'WCAG accessibility audit website'],
+  ['Security review', 'security audit of website URL'],
 ];
 let failed = false;
 let executable = 0;

@@ -4,16 +4,16 @@ import { chosenReady, discover, invokeCapability, showOutcome, terminal } from '
 // from the network rather than wiring one fixed audit vendor into CI.
 const io = terminal();
 try {
-  console.log('Independent release gate — request two distinct outside reviews before shipping.');
-  const artifact = await io.ask('What is being released (public URL, repository, or short description)? ');
+  console.log('Independent release gate — request accessibility and security-header checks before shipping a website.');
+  const artifact = await io.ask('Public website URL to review: ');
   if (!artifact) process.exit(0);
   if ((await io.ask('Do you own this asset or have permission to test it? Type yes: ')) !== 'yes') {
     console.log('No external review requested.');
     process.exit(0);
   }
   const checks = [
-    { label: 'Accessibility', query: `Independent accessibility audit agent for ${artifact}`, objective: 'Identify concrete accessibility failures with evidence and severity.' },
-    { label: 'Security', query: `Independent application security review agent for ${artifact}`, objective: 'Identify concrete security risks with evidence and severity; do not modify the target.' },
+    { label: 'Accessibility', query: 'WCAG accessibility audit website', objective: 'Check WCAG accessibility' },
+    { label: 'Security', query: 'security audit of website URL', objective: 'Check website security headers' },
   ];
   const outcomes = [];
   for (const check of checks) {
