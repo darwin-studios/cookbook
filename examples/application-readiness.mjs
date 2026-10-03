@@ -12,6 +12,7 @@ try {
     'Hiring agents',
     `${employer} jobs OpenAPI list current job openings`,
     'Find the employer’s executable, read-only capability to list current openings and application requirements.',
+    { select: (item) => item.agentName.toLowerCase().includes(employer.toLowerCase()) && /list current job openings/i.test(item.name || '') },
   );
   requireReady(ranked, 'the hiring agent');
   const number = await io.ask('Choose the READY listing capability (Enter to stop): ');
