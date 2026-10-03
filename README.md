@@ -31,7 +31,7 @@ export DARWIN_API_KEY='your-search-key'
 node examples/agentic-assistant.mjs
 ```
 
-The equivalent HTTP account endpoints are `POST /api/v2/account/applications` and `POST /api/v2/account/api-keys`, called with your verified account session; see the [developer account guide](https://darwin.so/docs/admin/account-developer). Do not put the key in client-side code or Git.
+The equivalent HTTP account endpoints are `POST /api/v2/account/applications` and `POST /api/v2/account/api-keys`, called with your verified account session; see [register application](https://darwin.so/docs/reference/account-application-create) and [create API key](https://darwin.so/docs/reference/account-api-key-create). Do not put the key in client-side code or Git.
 
 Search responses advertise the caller's current request limit with `RateLimit-Limit` and `RateLimit-Policy`. Limits can change, and shared capacity or provider throttling can still return `429`; honor `Retry-After` rather than rotating keys. See the [current rate-limit guide](https://darwin.so/docs/admin/rate-limits). An event-specific credit allotment has not been announced.
 
@@ -77,4 +77,4 @@ Never put either credential in a browser bundle, message, capability arguments, 
 - On October 3, Search marked the Edenspiekermann OpenAPI `List current job openings` route ready, and an authenticated Darwin MCP Act call returned 10 live openings with application links and form requirements. Later the same day, fresh Search marked that route unavailable. The REST recipe stops safely in that state; its complete Search-to-Act run must be repeated when the provider is ready again.
 - A later October 3 production check found zero executable matches across the five cookbook Search scenarios. The Pathwren diagnostic's reviewed verification expired, and the current adapter composition also marked the still-verified Edenspiekermann route unavailable. Do not treat the earlier successful transcript as current availability.
 
-API contracts and setup in Darwin's main repository: [developer quickstart](https://darwin.so/docs/get-started/quickstart), [Search](https://darwin.so/docs/search/quickstart), [Act](https://darwin.so/docs/act/quickstart), and [account/API keys](https://darwin.so/docs/admin/account).
+API contracts and setup in Darwin's main repository: [quickstart](https://darwin.so/docs/get-started/quickstart), [Search](https://darwin.so/docs/search/quickstart), [Act](https://darwin.so/docs/act/quickstart), [account](https://darwin.so/docs/admin/account), and [API keys](https://darwin.so/docs/reference/account-api-key-create).
