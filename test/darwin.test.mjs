@@ -13,6 +13,16 @@ test('Search uses the local public-v2 body and preserves ranked IDs', async () =
   assert.deepEqual(choices(found).map(({ agent, agentName, capability }) => ({ agent, agentName, capability })), [{ agent: 'agent-1', agentName: 'Auditor', capability: 'cap-2' }]);
 });
 
+test('Search can focus a product request on shopping agents', async () => {
+  const fetchImpl = async (_url, options) => {
+    assert.deepEqual(JSON.parse(options.body), {
+      query: 'running shoes', category: 'shopping', objective: 'Prefer quote-capable shopping agents', numResults: 10,
+    });
+    return { ok: true, json: async () => ({ agents: [], results: [] }) };
+  };
+  await search('running shoes', { category: 'shopping', objective: 'Prefer quote-capable shopping agents', numResults: 10, fetchImpl });
+});
+
 test('Act fails closed for a non-executable Search result', async () => {
   await assert.rejects(startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'unavailable', canStartThread: false }, { messageType: 'message', messageContent: 'Hi' }), /not currently executable/);
 });

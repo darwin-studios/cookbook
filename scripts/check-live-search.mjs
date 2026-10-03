@@ -10,7 +10,8 @@ const scenarios = [
     relevant: (item) => /Edenspiekermann/i.test(item.agentName) && /list current job openings/i.test(item.name),
   },
   {
-    name: 'Shopping concierge', query: 'shopping product search agent', minimumAgents: 2,
+    name: 'Shopping concierge', query: 'running shoes', category: 'shopping',
+    objective: 'Prefer quote-capable shopping agents', minimumAgents: 2,
     relevant: (item) => /shopping|product.search|quote|offer|seller/i.test(`${item.name} ${item.agentName}`),
   },
   {
@@ -24,10 +25,10 @@ const scenarios = [
 ];
 let failed = false;
 const readyByScenario = new Map();
-for (const { name, query, minimumAgents, relevant } of scenarios) {
+for (const { name, query, category, objective, minimumAgents, relevant } of scenarios) {
   const started = performance.now();
   try {
-    const found = await search(query, { numResults: 5 });
+    const found = await search(query, { category, objective, numResults: 5 });
     const ranked = choices(found);
     if (!Array.isArray(found.agents) || !Array.isArray(found.results)) throw new Error('Invalid Search response shape');
     const readyAgents = new Set(ranked.filter((item) => relevant(item) && item.canStartThread && item.readiness === 'ready').map((item) => item.agent));

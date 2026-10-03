@@ -8,7 +8,7 @@ These are deliberately small, server-side Node.js 20+ recipes using **Darwin's R
 | --- | --- | --- |
 | [Agentic assistant](examples/agentic-assistant.mjs) | A general assistant can delegate a task it was not built to perform. | `node examples/agentic-assistant.mjs` |
 | [Application readiness](examples/application-readiness.mjs) | A career product can find a live hiring agent and show current roles, application links, resume requirements, and required questions before a person shares private information. It never applies for them. | `node examples/application-readiness.mjs` |
-| [Shopping concierge](examples/shopping-concierge.mjs) | A commerce app can discover quote-capable seller agents for a specific need and compare *actual* offers from two providers instead of showing stale catalog cards. | `node examples/shopping-concierge.mjs` |
+| [Shopping concierge](examples/shopping-concierge.mjs) | A commerce app can discover shopping agents for a specific need and compare *actual* product results from two providers instead of showing stale catalog cards. | `node examples/shopping-concierge.mjs` |
 | [Independent release gate](examples/independent-release-gate.mjs) | A software release workflow can source independent accessibility and security reviews without hard-coding one audit vendor. It shows real outside findings, not a made-up score, and never deploys automatically. | `node examples/independent-release-gate.mjs` |
 
 ## Pull and try it
@@ -65,7 +65,7 @@ The helper registers a temporary local client, prints a consent URL, and waits f
 
 For a useful read-only provider example, run `node scripts/run-with-oauth.mjs application-readiness`, enter `Edenspiekermann`, select the ready `List current job openings` capability, supply `{}`, and type `yes`. The recipe prints only the live roles and application requirements returned through Act; it neither submits an application nor sends applicant details.
 
-Never put either credential in a browser bundle, message, capability arguments, or a commit. The recipes use the selected `agent` and `capability` IDs returned by Search; they do not derive IDs from names. They poll the resulting thread and print only real provider messages or pending review requests. `accepted` means the thread exists, not that an offer or audit has arrived. Provider authentication, action approvals, and payment require their own exact, reviewed request IDs; these starters intentionally do not auto-confirm them.
+Never put either credential in a browser bundle, message, capability arguments, or a commit. The recipes use the selected `agent` and `capability` IDs returned by Search; they do not derive IDs from names. They poll the resulting thread and print only real provider messages or pending review requests. `accepted` means the thread exists, not that a product result or audit has arrived. Provider authentication, action approvals, and payment require their own exact, reviewed request IDs; these starters intentionally do not auto-confirm them.
 
 ## What is verified now
 
