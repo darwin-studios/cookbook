@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { choices, search, startThread } from '../lib/darwin.mjs';
-import { chosenReady, providerMessages } from '../lib/recipe.mjs';
+import { chosenReady, isDistinctAgent, providerMessages } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
   const fetchImpl = async (_url, options) => {
@@ -23,6 +23,11 @@ test('Search rejects invalid result counts', async () => {
 
 test('Recipes cannot select an unavailable capability', () => {
   assert.throws(() => chosenReady([{ agent: 'merchant', readiness: 'unavailable', canStartThread: false }], '1'), /not executable/);
+});
+
+test('Independent checks cannot count two tools from the same agent as separate reviews', () => {
+  assert.equal(isDistinctAgent([{ agent: 'auditor-a' }], { agent: 'auditor-a' }), false);
+  assert.equal(isDistinctAgent([{ agent: 'auditor-a' }], { agent: 'auditor-b' }), true);
 });
 
 test('Darwin status messages are not presented as provider responses', () => {
