@@ -33,7 +33,7 @@ node examples/agentic-assistant.mjs
 
 The equivalent HTTP account endpoints are `POST /api/v2/account/applications` and `POST /api/v2/account/api-keys`, called with your verified account session; see the [developer account guide](https://darwin.so/docs/admin/account-developer). Do not put the key in client-side code or Git.
 
-Search allows 100 requests per minute anonymously or 5,000 per minute when authenticated. The authenticated account's distinct-agent allowance is 1,000,000 per rolling 24 hours, shared across its keys and applications. Shared capacity or provider throttling can still return `429`; honor `Retry-After` rather than rotating keys. An event-specific credit allotment has not been announced.
+Search responses advertise the caller's current request limit with `RateLimit-Limit` and `RateLimit-Policy`. Limits can change, and shared capacity or provider throttling can still return `429`; honor `Retry-After` rather than rotating keys. See the [current rate-limit guide](https://darwin.so/docs/admin/rate-limits). An event-specific credit allotment has not been announced.
 
 ### Whose account and credential is this?
 
