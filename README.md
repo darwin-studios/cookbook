@@ -22,7 +22,7 @@ node examples/agentic-assistant.mjs
 npm run check:live-search
 ```
 
-The live check reports latency and executable matches for all four recipes. It exits nonzero if none has a currently executable route; a successful Search response alone is not Act readiness.
+The live check reports latency and executable agents for all four recipes. It exits nonzero if **any** recipe lacks enough ready agents: one for the assistant and hiring examples, two distinct seller agents for shopping, and two distinct agents across the accessibility and security checks. A successful Search response alone is not Act readiness.
 
 For authenticated, server-side **Search**, sign in to Darwin, open **Me → Developers**, create an application, then create a **Search key** for it. Copy the key when it appears (Darwin shows it once; the key expires after 90 days), and set it only in your server environment:
 
