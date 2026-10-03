@@ -22,6 +22,8 @@ node examples/agentic-assistant.mjs
 npm run check:live-search
 ```
 
+The live check reports latency and executable matches for all four recipes. It exits nonzero if none has a currently executable route; a successful Search response alone is not Act readiness.
+
 For authenticated, server-side **Search**, sign in to Darwin, open **Me → Developers**, create an application, then create a **Search key** for it. Copy the key when it appears (Darwin shows it once; the key expires after 90 days), and set it only in your server environment:
 
 ```bash
@@ -57,7 +59,7 @@ An API key identifies your application for **Search**. It does **not** give your
 node scripts/run-with-oauth.mjs agentic-assistant
 ```
 
-For the currently verified diagnostic route, enter `MCP server health diagnostic whoami tool` at the task prompt, choose the ready `whoami` result, select action request, enter `{}` as its arguments, and type `yes`. The returned result is an external provider response, not a simulated answer. Readiness can change; if Search no longer marks it ready, the recipe stops.
+When the diagnostic route is verified, enter `MCP server health diagnostic whoami tool` at the task prompt, choose the ready `whoami` result, select action request, enter `{}` as its arguments, and type `yes`. The returned result is an external provider response, not a simulated answer. Readiness can change; if Search no longer marks it ready, the recipe stops.
 
 The helper registers a temporary local client, prints a consent URL, and waits for you to select an agent and click **Allow**. It then passes the token to the recipe in memory—no token copying or pasting. The same helper accepts `application-readiness`, `shopping-concierge`, or `independent-release-gate`. Close the process to end the local test; revoke the application's grant in Darwin if you no longer want it authorized. In a customer-facing product, request a separate OAuth grant from each customer when they choose to Act; do not pass the developer's personal token or shared app-agent token as that customer.
 
@@ -73,5 +75,6 @@ Never put either credential in a browser bundle, message, capability arguments, 
 - On October 3, live REST Search returned **no executable shopping or independent-audit match** for the recipe queries. The recipes show that truth; they are product prototypes, not a claim of live merchant offers or completed audits. Before a hackathon demo, provision at least one ready provider per scenario, then run those recipes end to end.
 - On October 3, a newly created 90-day Search-only key for the cookbook application returned live results for two authenticated Search queries. A third query exposed the former 250-distinct-agent daily cap. Darwin deployed the raised limits, and the production anonymous Search response advertised the new 100/minute limit; the key value was not saved in this repository.
 - On October 3, Search marked the Edenspiekermann OpenAPI `List current job openings` route ready, and an authenticated Darwin MCP Act call returned 10 live openings with application links and form requirements. Later the same day, fresh Search marked that route unavailable. The REST recipe stops safely in that state; its complete Search-to-Act run must be repeated when the provider is ready again.
+- A later October 3 production check found zero executable matches across the five cookbook Search scenarios. The Pathwren diagnostic's reviewed verification expired, and the current adapter composition also marked the still-verified Edenspiekermann route unavailable. Do not treat the earlier successful transcript as current availability.
 
 API contracts and setup in Darwin's main repository: [developer quickstart](https://darwin.so/docs/get-started/quickstart), [Search](https://darwin.so/docs/search/quickstart), [Act](https://darwin.so/docs/act/quickstart), and [account/API keys](https://darwin.so/docs/admin/account).
