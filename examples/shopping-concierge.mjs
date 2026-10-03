@@ -9,8 +9,9 @@ try {
   const need = await io.ask('What are you shopping for? ');
   if (!need) process.exit(0);
   const constraints = await io.ask('Budget, delivery, condition, warranty, or other non-negotiables: ');
-  const query = `Find a merchant or shopping agent that can find and quote: ${need}. Requirements: ${constraints}`;
-  const ranked = await discover('Shopping agents', query, `Return a specific available option with total price, availability, delivery timing, and return terms for ${need}.`);
+  // Keep discovery broad: product-specific constraints can suppress otherwise
+  // relevant providers before we can inspect their live capabilities.
+  const ranked = await discover('Shopping agents', 'shopping product search agent', 'Prefer quote-capable shopping agents');
   if (!ranked.some((item) => item.canStartThread && item.readiness === 'ready')) process.exit(0);
   const raw = await io.ask('Choose up to two READY capability numbers to request offers (comma-separated): ');
   const numbers = [...new Set(raw.split(',').map((value) => value.trim()).filter(Boolean))].slice(0, 2);

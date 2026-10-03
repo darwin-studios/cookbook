@@ -3,7 +3,7 @@ import { choices, search } from '../lib/darwin.mjs';
 const scenarios = [
   ['Assistant diagnostic', 'MCP server health diagnostic whoami tool'],
   ['Application readiness', 'Edenspiekermann jobs OpenAPI list current job openings'],
-  ['Shopping concierge', 'Find seller agents for an ergonomic office chair under $400 with delivery and warranty'],
+  ['Shopping concierge', 'shopping product search agent'],
   ['Accessibility review', 'Independent accessibility audit agent for a software release'],
   ['Security review', 'Independent application security review agent for a software release'],
 ];
