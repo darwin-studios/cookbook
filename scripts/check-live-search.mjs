@@ -8,6 +8,7 @@ const scenarios = [
   ['Security review', 'Independent application security review agent for a software release'],
 ];
 let failed = false;
+let executable = 0;
 for (const [scenario, query] of scenarios) {
   const started = performance.now();
   try {
@@ -15,10 +16,15 @@ for (const [scenario, query] of scenarios) {
     const ranked = choices(found);
     if (!Array.isArray(found.agents) || !Array.isArray(found.results)) throw new Error('Invalid Search response shape');
     const ready = ranked.filter((item) => item.canStartThread && item.readiness === 'ready').length;
+    executable += ready;
     console.log(`${scenario}: ${found.outcome}, ${ranked.length} ranked, ${ready} executable, ${Math.round(performance.now() - started)} ms`);
   } catch (error) {
     failed = true;
     console.error(`${scenario}: ${error.message} (${Math.round(performance.now() - started)} ms)`);
   }
+}
+if (executable === 0) {
+  failed = true;
+  console.error('No cookbook scenario currently has an executable Search result. Act demos are not ready.');
 }
 if (failed) process.exitCode = 1;
