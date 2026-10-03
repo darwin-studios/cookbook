@@ -1,4 +1,4 @@
-import { chosenReady, discover, invokeCapability, showOutcome, terminal } from '../lib/recipe.mjs';
+import { chosenReady, discover, invokeCapability, providerMessages, requireReady, showOutcome, terminal } from '../lib/recipe.mjs';
 
 // Product idea: an intent-to-offer shopping layer inside an existing app.
 // Discover providers at request time, request up to two live offers, and compare
@@ -12,7 +12,7 @@ try {
   // Keep discovery broad: product-specific constraints can suppress otherwise
   // relevant providers before we can inspect their live capabilities.
   const ranked = await discover('Shopping agents', 'shopping product search agent', 'Prefer quote-capable shopping agents');
-  if (!ranked.some((item) => item.canStartThread && item.readiness === 'ready')) process.exit(0);
+  requireReady(ranked, 'shopping');
   const raw = await io.ask('Choose up to two READY capability numbers to request offers (comma-separated): ');
   const numbers = [...new Set(raw.split(',').map((value) => value.trim()).filter(Boolean))].slice(0, 2);
   if (!numbers.length) process.exit(0);
@@ -29,6 +29,9 @@ try {
   }
   console.log('\nOffer comparison — only actual external responses appear below.');
   for (const { choice, outcome } of outcomes) showOutcome(choice.agentName, outcome);
+  if (outcomes.some(({ outcome }) => !outcome || !providerMessages(outcome.messages).length)) {
+    throw new Error('At least one selected seller has not returned an external response. Do not treat this comparison as complete.');
+  }
   console.log('This starter does not call Pay or auto-confirm checkout. Review any later payment request separately.');
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

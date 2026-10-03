@@ -1,4 +1,4 @@
-import { chosenReady, discover, invokeCapability, terminal } from '../lib/recipe.mjs';
+import { chosenReady, discover, invokeCapability, requireReady, terminal } from '../lib/recipe.mjs';
 import { describeJob, jobsFromOutcome } from '../lib/jobs.mjs';
 
 // A career product can discover a live hiring agent and show exactly what an
@@ -13,7 +13,7 @@ try {
     `${employer} jobs OpenAPI list current job openings`,
     'Find the employer’s executable, read-only capability to list current openings and application requirements.',
   );
-  if (!ranked.some((item) => item.canStartThread && item.readiness === 'ready')) process.exit(0);
+  requireReady(ranked, 'the hiring agent');
   const number = await io.ask('Choose the READY listing capability (Enter to stop): ');
   if (!number) process.exit(0);
   const choice = chosenReady(ranked, number);
@@ -26,7 +26,7 @@ try {
   const jobs = jobsFromOutcome(outcome);
   console.log(`\n${jobs.length} live openings from ${choice.agentName}; thread ${outcome.thread}. No application submitted.`);
   if (!jobs.length) {
-    console.log('No structured job result yet. Check the thread later; do not treat acceptance as a provider answer.');
+    throw new Error('No structured job result yet. Check the thread later; do not treat acceptance as a provider answer.');
   }
   for (const [index, job] of jobs.entries()) {
     const detail = describeJob(job);

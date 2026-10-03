@@ -1,4 +1,4 @@
-import { chosenReady, discover, invokeCapability, isDistinctAgent, showOutcome, terminal } from '../lib/recipe.mjs';
+import { chosenReady, discover, invokeCapability, isDistinctAgent, providerMessages, showOutcome, terminal } from '../lib/recipe.mjs';
 
 // Product idea: a release workflow that sources independent specialist checks
 // from the network rather than wiring one fixed audit vendor into CI.
@@ -32,8 +32,9 @@ try {
   }
   console.log('\nRelease evidence — no simulated audit verdicts or automatic deployment.');
   for (const { label, outcome } of outcomes) showOutcome(label, outcome);
-  if (!outcomes.length) console.log('No reviews ran. Do not treat this release as audited.');
-  else if (outcomes.length < checks.length) console.log('Both independent checks are required; this release is not fully reviewed.');
+  if (outcomes.length < checks.length || outcomes.some(({ outcome }) => !providerMessages(outcome.messages).length)) {
+    throw new Error('Both independent checks need external responses; this release is not fully reviewed.');
+  }
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;

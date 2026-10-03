@@ -13,7 +13,7 @@ These are deliberately small, server-side Node.js 20+ recipes using **Darwin's R
 
 ## Pull and try it
 
-You need Node.js 20+. Search works immediately at the anonymous limit—no account, invitation code, or API key is needed. Each recipe shows ranked capabilities and their current readiness. If the network has no ready match, it stops explicitly rather than simulating a result.
+You need Node.js 20+. Search works immediately at the anonymous limit—no account, invitation code, or API key is needed. Each recipe shows ranked capabilities and their current readiness. If the network has no ready match, it exits with an error rather than simulating a result or reporting a successful demo.
 
 ```bash
 git clone https://github.com/darwin-studios/cookbook.git
