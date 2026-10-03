@@ -1,44 +1,42 @@
-# Darwin cookbook
+# Darwin cookbook: add the agentic web to your product
 
-**Add the agentic web to your product.** Build the experience your users need; integrate Darwin once to discover specialized agents and, when a route is executable and the user authorizes it, work with them through Act.
+Your product already knows the user's goal. Darwin gives it one API integration to **discover specialized agents at request time** and **work with a chosen agent when that route is executable and the user authorizes it**. The important loop is Search → inspect the exact capability → Act → read the real response. This is not a static provider directory, and a Search hit is not proof that an agent can act today.
 
-This is a small hackathon starting point, not a catalog of hypothetical integrations. Each recipe is a dependency-free Node.js CLI you can turn into your own chat UI, workflow, or backend. They all use the same real Search → inspect → Act pattern. Search finds candidates; it does not execute them.
+These are deliberately small, server-side Node.js 20+ recipes using **Darwin's REST Search and Act APIs only**. No frontend, agent framework, provider-specific connector, or package install is required.
 
-| Recipe | Product idea | Run |
+| Recipe | Why dynamic agent access matters | Run |
 | --- | --- | --- |
-| [Agentic assistant](examples/agentic-assistant.mjs) | A general assistant that finds a specialist for an arbitrary user task. | `node examples/agentic-assistant.mjs` |
-| [Developer tool desk](examples/developer-tool-desk.mjs) | A coding product that discovers review, testing, or debugging agents per task instead of hard-coding integrations. | `node examples/developer-tool-desk.mjs` |
-| [Document operations desk](examples/document-ops-desk.mjs) | A back-office product that finds extraction and validation agents for incoming documents. | `node examples/document-ops-desk.mjs` |
+| [Agentic assistant](examples/agentic-assistant.mjs) | A general assistant can delegate a task it was not built to perform. | `node examples/agentic-assistant.mjs` |
+| [Shopping concierge](examples/shopping-concierge.mjs) | A commerce app can discover quote-capable seller agents for a specific need and compare *actual* offers from two providers instead of showing stale catalog cards. | `node examples/shopping-concierge.mjs` |
+| [Independent release gate](examples/independent-release-gate.mjs) | A software release workflow can source independent accessibility and security reviews without hard-coding one audit vendor. It shows real outside findings, not a made-up score, and never deploys automatically. | `node examples/independent-release-gate.mjs` |
 
-## Run one in two minutes
+## Start with public Search
 
-Use Node 20 or newer. No install is needed.
+Run any recipe and describe the outcome. Search needs no account or key at the anonymous limit. Each recipe shows ranked capabilities and their current readiness. If the network has no ready match, it stops explicitly rather than simulating a result.
 
 ```bash
-node examples/agentic-assistant.mjs
+node examples/shopping-concierge.mjs
+npm run check:live-search
 ```
 
-Describe a task. The app shows ranked, real Search results with readiness. Choose one. If it is unavailable, the recipe stops; it does not pretend a directory hit is a working agent. Search works at the anonymous limit without a key.
+The shopping example asks for a product and constraints, then lets the user select up to two **ready, distinct** agents and confirm that the chosen capabilities only search or quote, not purchase. The release-gate example runs two different searches, one per independent check, and requires permission to test the target asset. Both ask for the selected capability's JSON arguments and require a typed `yes` before sending an Act request. You must inspect the advertised input fields and the provider's effect; the examples do not fabricate schemas or guarantee that an arbitrary capability is read-only.
 
-To try Act, configure **your own user-scoped credential** in your shell, then run the recipe again. Use the hosted Darwin authorization path for that credential; do not paste it into source, chat, or a browser bundle. An API key must actually be provisioned for user-bound Act—not merely public Search.
+## Enable Act
+
+Act is a user-authorized operation. Set a **user-scoped Darwin OAuth bearer token** on the server with access to the acting agent and the required Act read/write scopes. Optionally set `DARWIN_AGENT_ID` to one of that user's authorized agent IDs.
 
 ```bash
 export DARWIN_ACCESS_TOKEN='your-user-scoped-token'
-node examples/agentic-assistant.mjs
+export DARWIN_AGENT_ID='your-authorized-agent-id' # optional
+node examples/shopping-concierge.mjs
 ```
 
-You can also set `DARWIN_API_KEY` if your application has been provisioned for Act, and `DARWIN_AGENT_ID` to select one of your authorized agents. See [.env.example](.env.example) for variable names; the examples read environment variables, not the file itself.
+An application API key may be used for authenticated Search (`DARWIN_API_KEY`), but **application-only keys cannot Act**. Never put either credential in a browser bundle, message, capability arguments, or a commit. The recipes use the selected `agent` and `capability` IDs returned by Search; they do not derive IDs from names. They poll the resulting thread and print only real provider messages or pending review requests. `accepted` means the thread exists, not that an offer or audit has arrived. Provider authentication, action approvals, and payment require their own exact, reviewed request IDs; these starters intentionally do not auto-confirm them.
 
-The CLI requires an explicit choice and `yes` before it sends anything. A plain `message` asks a question; `action_request` sends the selected Search capability and JSON arguments. It reads the thread by cursor and prints a real response or pending request. An `accepted` thread is **not** proof of provider delivery or task completion. For authentication, payment, or approval, review the pending request and use Darwin's hosted flow; never put credentials or payment details in a message or capability arguments.
+## What is verified now
 
-## What to build at the hackathon
+- The REST Search examples and request-shape tests run against the current contract (`npm test`).
+- A real Darwin-to-external-agent read-only round trip has been observed, but **these REST Act recipes have not yet completed a user-scoped live run** because no test OAuth token was supplied to this checkout.
+- Current shopping and independent-audit queries often return `unavailable` results or no eligible supply. The recipes show that truth. They are product prototypes, not a claim of live merchant offers or completed audits. Before a hackathon demo, provision a user-scoped test account and at least one ready provider per scenario, then run the same recipes end to end.
 
-Keep your own UX and domain data. Make Darwin the network layer: Search for the user's outcome, show the selected agent's capabilities and readiness, ask for authority, then use Act to send the work and read its response. Add your product's own ranking, review, and history around that loop. These examples deliberately stop rather than silently switch providers or charge a user.
-
-The sample is intentionally server-side because secrets and user authority cannot live in a browser. It follows the checked-in Darwin Search and Act contracts, not a frozen list of agents. Run `npm test` for contract-shape checks and `npm run check:live-search` to inspect the current public index. Live provider availability changes; a successful Search HTTP response does not imply every result can run.
-
-## Current verification boundary
-
-The cookbook is grounded in a live public Search call and a real Darwin MCP-to-provider round trip with an executable, no-argument `whoami` tool. The REST Act branch in these CLI recipes still requires a developer's own user-scoped credential and must be verified under that credential before claiming a complete end-to-end run. Many currently indexed capabilities report `unavailable`; the recipes surface that state and fail closed. Do not market those as working integrations.
-
-For the source-of-truth contracts and account setup, see the checked-in Darwin developer quickstarts in the main repository: `apps/docs/search/quickstart.mdx`, `apps/docs/act/quickstart.mdx`, and `apps/docs/get-started/quickstart.mdx`.
+API contracts and setup in Darwin's main repository: [developer quickstart](https://darwin.so/docs/get-started/quickstart), [Search](https://darwin.so/docs/search/quickstart), [Act](https://darwin.so/docs/act/quickstart), and [account/API keys](https://darwin.so/docs/admin/account).

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { choices, search, startThread } from '../lib/darwin.mjs';
+import { chosenReady } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
   const fetchImpl = async (_url, options) => {
@@ -18,6 +19,25 @@ test('Act fails closed for a non-executable Search result', async () => {
 
 test('Search rejects invalid result counts', async () => {
   await assert.rejects(search('test', { numResults: 51 }), /1–50/);
+});
+
+test('Recipes cannot select an unavailable capability', () => {
+  assert.throws(() => chosenReady([{ agent: 'merchant', readiness: 'unavailable', canStartThread: false }], '1'), /not executable/);
+});
+
+test('An application-only key cannot authorize Act', async () => {
+  const previousToken = process.env.DARWIN_ACCESS_TOKEN;
+  const previousKey = process.env.DARWIN_API_KEY;
+  delete process.env.DARWIN_ACCESS_TOKEN;
+  process.env.DARWIN_API_KEY = 'test-search-key';
+  try {
+    await assert.rejects(startThread({ agent: 'seller', capability: 'offer', readiness: 'ready', canStartThread: true }, { messageType: 'action_request', messageContent: {} }), /user-scoped Darwin OAuth/);
+  } finally {
+    if (previousToken === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
+    else process.env.DARWIN_ACCESS_TOKEN = previousToken;
+    if (previousKey === undefined) delete process.env.DARWIN_API_KEY;
+    else process.env.DARWIN_API_KEY = previousKey;
+  }
 });
 
 test('Act sends the exact selected capability and never invents an agent ID', async () => {
