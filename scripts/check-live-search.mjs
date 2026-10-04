@@ -21,7 +21,7 @@ const scenarios = [
     relevant: (item) => /whoami|health diagnostic/i.test(`${item.name} ${item.description}`),
   },
   {
-    name: 'Application readiness', query: 'Edenspiekermann jobs OpenAPI list current job openings',
+    name: 'Application readiness', query: 'Edenspiekermann current job openings',
     objective: 'Find the employer’s executable, read-only capability to list current openings and application requirements.', minimumAgents: 1,
     relevant: (item) => /Edenspiekermann/i.test(item.agentName) && /list current job openings/i.test(item.name),
   },
