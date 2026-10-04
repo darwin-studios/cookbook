@@ -32,7 +32,7 @@ try {
   }
   console.log('\nRelease evidence — no simulated audit verdicts or automatic deployment.');
   for (const { label, outcome } of outcomes) showOutcome(label, outcome);
-  if (outcomes.length < checks.length || outcomes.some(({ outcome }) => !providerMessages(outcome.messages).length)) {
+  if (outcomes.length < checks.length || outcomes.some(({ outcome }) => outcome.errors?.length || !providerMessages(outcome.messages).length)) {
     throw new Error('Both independent checks need external responses; this release is not fully reviewed.');
   }
 } catch (error) {

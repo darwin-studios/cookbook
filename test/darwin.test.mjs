@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { choices, search, startThread, getThread, request, DarwinError } from '../lib/darwin.mjs';
-import { chosenReady, isDistinctAgent, providerMessages, requireReady } from '../lib/recipe.mjs';
+import { chosenReady, isDistinctAgent, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
   const fetchImpl = async (_url, options) => {
@@ -132,26 +132,52 @@ test('Act sends the exact selected capability and never invents an agent ID', as
   }
 });
 
-test('Act retries a transient startup 500 with the same idempotency key and body', async () => {
+test('Act does not replay an uncertain thread-start failure', async () => {
   const previous = process.env.DARWIN_ACCESS_TOKEN;
   process.env.DARWIN_ACCESS_TOKEN = 'test-only-token';
   try {
     const bodies = [];
     const fetchImpl = async (_url, options) => {
       bodies.push(JSON.parse(options.body));
-      return bodies.length === 1
-        ? { ok: false, status: 500, statusText: 'Internal Server Error', json: async () => ({}) }
-        : { ok: true, json: async () => ({ thread: 'thread-1', cursor: 'thread-1:1', status: 'accepted' }) };
+      return { ok: false, status: 503, statusText: 'Service Unavailable',
+        json: async () => ({ code: 'THREAD_DELIVERY_RECONCILIATION_REQUIRED' }) };
     };
-    const result = await startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'ready', canStartThread: true }, {
+    await assert.rejects(startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'ready', canStartThread: true }, {
       messageType: 'action_request', messageContent: {}, idempotencyKey: 'attempt-1', fetchImpl,
-    });
-    assert.equal(result.thread, 'thread-1');
-    assert.equal(bodies.length, 2);
-    assert.deepEqual(bodies[0], bodies[1]);
+    }), (error) => error instanceof DarwinError && error.code === 'THREAD_DELIVERY_RECONCILIATION_REQUIRED');
+    assert.equal(bodies.length, 1);
     assert.equal(bodies[0].idempotencyKey, 'attempt-1');
   } finally {
     if (previous === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
     else process.env.DARWIN_ACCESS_TOKEN = previous;
   }
+});
+
+test('A thread error is displayed as failure, not a provider answer', () => {
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...values) => lines.push(values.join(' '));
+  try {
+    showOutcome('Specialist', { thread: 'thread-1', messages: [],
+      errors: [{ code: 'MCP_TOOL_ERROR', retryable: false }] });
+  } finally { console.log = originalLog; }
+  assert.match(lines.join('\n'), /Provider\/runtime error MCP_TOOL_ERROR/);
+  assert.match(lines.join('\n'), /No successful external response/);
+});
+
+test('Thread reads stop on a structured provider error', async () => {
+  const originalFetch = globalThis.fetch;
+  let reads = 0;
+  globalThis.fetch = async () => {
+    reads++;
+    return { ok: true, json: async () => ({
+      cursor: 'thread-1:2', hasMore: false, needsAttention: false, messages: [], requests: [],
+      errors: [{ event: 'error-1', code: 'MCP_TOOL_ERROR', retryable: false }],
+    }) };
+  };
+  try {
+    const outcome = await readThread({ thread: 'thread-1', cursor: 'thread-1:1' });
+    assert.deepEqual(outcome.errors.map((error) => error.code), ['MCP_TOOL_ERROR']);
+    assert.equal(reads, 1);
+  } finally { globalThis.fetch = originalFetch; }
 });

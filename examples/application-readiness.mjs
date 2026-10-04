@@ -24,6 +24,7 @@ try {
   }
   const outcome = await invokeCapability(io, choice, 'List openings');
   if (!outcome) process.exit(0);
+  if (outcome.errors?.length) throw new Error(`The hiring agent failed: ${outcome.errors.map((error) => error.code).join(', ')}`);
   const jobs = jobsFromOutcome(outcome);
   console.log(`\n${jobs.length} live openings from ${choice.agentName}; thread ${outcome.thread}. No application submitted.`);
   if (!jobs.length) {
