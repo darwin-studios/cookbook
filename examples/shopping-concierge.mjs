@@ -1,4 +1,4 @@
-import { chosenReady, discover, invokeCapability, providerMessages, requireReady, showOutcome, terminal } from '../lib/recipe.mjs';
+import { chosenReady, discover, hasProviderResult, invokeCapability, requireReady, showOutcome, terminal } from '../lib/recipe.mjs';
 
 // Product idea: an intent-to-product-results shopping layer inside an existing app.
 // Discover providers at request time, request up to two live product searches, and compare
@@ -29,7 +29,7 @@ try {
   }
   console.log('\nProduct results — only actual external responses appear below.');
   for (const { choice, outcome } of outcomes) showOutcome(choice.agentName, outcome);
-  if (outcomes.some(({ outcome }) => !outcome || outcome.errors?.length || !providerMessages(outcome.messages).length)) {
+  if (outcomes.some(({ outcome }) => !outcome || outcome.errors?.length || !hasProviderResult(outcome.events))) {
     throw new Error('At least one selected shopping agent has not returned an external response. Do not treat this comparison as complete.');
   }
   console.log('This starter does not call Pay or auto-confirm checkout. Review any later payment request separately.');

@@ -9,7 +9,7 @@ if (!recipe || !['agentic-assistant', 'shopping-concierge', 'independent-release
   process.exit(2);
 }
 if (process.env.DARWIN_ENABLE_ACCOUNT_ACT_PREVIEW !== '1') {
-  console.error('Account-level Act is not deployed. This helper cannot run a live Act recipe yet; Search examples work without OAuth.');
+  console.error('Account-level Act has not passed a live cookbook replay. This helper is opt-in; Search examples work without OAuth.');
   process.exit(2);
 }
 
