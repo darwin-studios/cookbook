@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
+import { fetchOAuthJson } from '../lib/oauth.mjs';
 
 const recipe = process.argv[2];
 if (!recipe || !['agentic-assistant', 'shopping-concierge', 'independent-release-gate', 'application-readiness'].includes(recipe)) {
@@ -14,9 +15,7 @@ if (process.env.DARWIN_ENABLE_ACCOUNT_ACT_PREVIEW !== '1') {
 }
 
 const issuer = 'https://darwin.so/api/customer/auth';
-const metadataResponse = await fetch(`${issuer}/.well-known/openid-configuration`);
-if (!metadataResponse.ok) throw new Error(`OAuth discovery failed: ${metadataResponse.status}`);
-const metadata = await metadataResponse.json();
+const metadata = await fetchOAuthJson(`${issuer}/.well-known/openid-configuration`, { label: 'OAuth discovery' });
 const verifier = randomBytes(32).toString('base64url');
 const challenge = createHash('sha256').update(verifier).digest('base64url');
 const state = randomBytes(24).toString('base64url');
@@ -45,7 +44,8 @@ await new Promise((resolve) => server.listen(0, 'localhost', resolve));
 const redirectUri = `http://localhost:${server.address().port}/callback`;
 
 try {
-  const registrationResponse = await fetch(metadata.registration_endpoint, {
+  const registration = await fetchOAuthJson(metadata.registration_endpoint, {
+    label: 'OAuth client registration',
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -57,8 +57,6 @@ try {
       scope: 'openid profile directory:read human:actions',
     }),
   });
-  if (!registrationResponse.ok) throw new Error(`OAuth client registration failed: ${registrationResponse.status}`);
-  const registration = await registrationResponse.json();
   if (!registration.client_id) throw new Error('OAuth registration omitted client_id');
   const authorize = new URL(metadata.authorization_endpoint);
   for (const [key, value] of Object.entries({
@@ -70,15 +68,14 @@ try {
   console.log(`Open this Darwin consent URL in your browser:\n${authorize}\n`);
   const timer = setTimeout(() => fail(new Error('OAuth consent timed out after 10 minutes')), 600_000);
   const code = await callback.finally(() => clearTimeout(timer));
-  const tokenResponse = await fetch(metadata.token_endpoint, {
+  const token = await fetchOAuthJson(metadata.token_endpoint, {
+    label: 'OAuth token exchange',
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: redirectUri,
       client_id: registration.client_id, code_verifier: verifier,
       resource: 'https://api.darwin.so/api/v2' }),
   });
-  if (!tokenResponse.ok) throw new Error(`OAuth token exchange failed: ${tokenResponse.status}`);
-  const token = await tokenResponse.json();
   if (!token.access_token) throw new Error('OAuth token response omitted access_token');
   console.log('OAuth succeeded. Running the recipe; the token stays in this process and its child.');
   const child = spawn(process.execPath, [resolve('examples', `${recipe}.mjs`)], {
