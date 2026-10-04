@@ -1,0 +1,18 @@
+{
+  "name": "darwin-ide-companion-cookbook",
+  "displayName": "Darwin IDE Companion (Cookbook)",
+  "description": "Suggests relevant external agents for an explicit coding task and lets you review an Act attempt.",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "darwin-cookbook",
+  "engines": { "vscode": "^1.90.0" },
+  "main": "./extension.cjs",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "darwinIde.setTask", "title": "Darwin: Set Current Task" },
+      { "command": "darwinIde.showSuggestions", "title": "Darwin: Show Agent Suggestions" },
+      { "command": "darwinIde.searchNow", "title": "Darwin: Search for This Task" }
+    ]
+  }
+}

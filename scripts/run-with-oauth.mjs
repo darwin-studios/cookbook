@@ -1,19 +1,16 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { fetchOAuthJson } from '../lib/oauth.mjs';
 
 const recipe = process.argv[2];
-if (!recipe || !['agentic-assistant', 'shopping-concierge', 'independent-release-gate', 'application-readiness'].includes(recipe)) {
-  console.error('Usage: node scripts/run-with-oauth.mjs <agentic-assistant|shopping-concierge|independent-release-gate|application-readiness>');
+const cookbookRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+if (!recipe || !['agentic-assistant', 'shopping-concierge', 'independent-release-gate', 'application-readiness', 'ide-companion'].includes(recipe)) {
+  console.error('Usage: node scripts/run-with-oauth.mjs <agentic-assistant|shopping-concierge|independent-release-gate|application-readiness|ide-companion>');
   process.exit(2);
 }
-if (process.env.DARWIN_ENABLE_ACCOUNT_ACT_PREVIEW !== '1') {
-  console.error('Account-level Act has not passed a live cookbook replay. This helper is opt-in; Search examples work without OAuth.');
-  process.exit(2);
-}
-
 const issuer = 'https://darwin.so/api/customer/auth';
 const metadata = await fetchOAuthJson(`${issuer}/.well-known/openid-configuration`, { label: 'OAuth discovery' });
 const verifier = randomBytes(32).toString('base64url');
@@ -78,8 +75,8 @@ try {
   });
   if (!token.access_token) throw new Error('OAuth token response omitted access_token');
   console.log('OAuth succeeded. Running the recipe; the token stays in this process and its child.');
-  const child = spawn(process.execPath, [resolve('examples', `${recipe}.mjs`)], {
-    stdio: 'inherit', env: { ...process.env, DARWIN_ACCESS_TOKEN: token.access_token },
+  const child = spawn(process.execPath, [resolve(cookbookRoot, 'examples', `${recipe}.mjs`), ...(recipe === 'ide-companion' ? ['--act'] : [])], {
+    cwd: cookbookRoot, stdio: 'inherit', env: { ...process.env, DARWIN_ACCESS_TOKEN: token.access_token },
   });
   const exitCode = await new Promise((resolve) => child.on('exit', (code) => resolve(code ?? 1)));
   process.exitCode = exitCode;

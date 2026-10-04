@@ -1,6 +1,10 @@
 import { choices, search } from '../lib/darwin.mjs';
 import { searchLatencyBudgetMs, searchLatencyPasses } from '../lib/preflight.mjs';
 import { findCandidates, isAccessibilityAuditCandidate, isSecurityHeadersCandidate, isShoppingResearchCandidate } from '../lib/recipe.mjs';
+import { ideSearchRequest } from '../lib/ide-context.mjs';
+
+const ideTask = 'I am building a SaaS signup flow and need to verify live DNS SPF, DMARC, and MTA-STS records for our sending domain';
+const ideRequest = ideSearchRequest({ task: ideTask, language: 'typescript', workArea: 'implementation' });
 
 const scenarios = [
   {
@@ -29,6 +33,10 @@ const scenarios = [
     name: 'Assistant diagnostic', query: 'MCP server health diagnostic whoami tool', numResults: 8,
     objective: 'Find an agent able to complete this exact task: MCP server health diagnostic whoami tool', minimumAgents: 1,
     relevant: (item) => /whoami|health diagnostic/i.test(`${item.name} ${item.description}`),
+  },
+  {
+    name: 'IDE companion email-security task', query: ideRequest.query, objective: ideRequest.objective, numResults: 8, minimumAgents: 1,
+    relevant: (item) => /spf/i.test(`${item.name} ${item.description}`) && /dmarc/i.test(`${item.name} ${item.description}`),
   },
   {
     name: 'Application readiness', query: 'Edenspiekermann current job openings',
@@ -84,6 +92,6 @@ if (accessibility.size && security.size && new Set([...accessibility, ...securit
   console.error('The release-gate checks need two distinct executable agents.');
 }
 if (failed) {
-  console.error('At least one cookbook or Quickstart scenario is slow, lacks relevant top results, or lacks the executable agents it needs. Act demos are not ready.');
+  console.error('At least one cookbook or Quickstart scenario is slow, lacks relevant top results, or lacks the executable agents it needs. Review the scenario results above before a live demo.');
   process.exitCode = 1;
 }
