@@ -1,4 +1,4 @@
-import { chosenReady, discover, hasProviderResult, invokeCapability, requireReady, showOutcome, terminal } from '../lib/recipe.mjs';
+import { chosenReady, discover, hasProviderResult, invokeCapability, isShoppingResearchCandidate, requireReady, showOutcome, terminal } from '../lib/recipe.mjs';
 
 // Product idea: an intent-to-product-results shopping layer inside an existing app.
 // Discover providers at request time, request up to two live product searches, and compare
@@ -11,7 +11,9 @@ try {
   const constraints = await io.ask('Budget, delivery, condition, warranty, or other non-negotiables: ');
   // Category keeps an ordinary product request focused on shopping agents.
   // Keep budget and other constraints for the selected provider's live request.
-  const ranked = await discover('Shopping agents', need, 'Prefer quote-capable shopping agents', { category: 'shopping' });
+  const ranked = await discover('Shopping research agents', need, 'Find product-search or price-comparison capabilities, not purchase or checkout', {
+    category: 'shopping', select: isShoppingResearchCandidate,
+  });
   requireReady(ranked, 'shopping');
   const raw = await io.ask('Choose up to two READY product-search or quote capabilities (comma-separated): ');
   const numbers = [...new Set(raw.split(',').map((value) => value.trim()).filter(Boolean))].slice(0, 2);

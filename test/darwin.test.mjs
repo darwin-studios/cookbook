@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { choices, search, startThread, sendThreadMessage, getThread, request, DarwinError } from '../lib/darwin.mjs';
-import { chosenReady, hasProviderResult, isDistinctAgent, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
+import { chosenReady, hasProviderResult, isDistinctAgent, isShoppingResearchCandidate, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
   const fetchImpl = async (_url, options) => {
@@ -16,11 +16,18 @@ test('Search uses the local public-v2 body and preserves ranked IDs', async () =
 test('Search can focus a product request on shopping agents', async () => {
   const fetchImpl = async (_url, options) => {
     assert.deepEqual(JSON.parse(options.body), {
-      query: 'running shoes', category: 'shopping', objective: 'Prefer quote-capable shopping agents', numResults: 10,
+      query: 'running shoes', category: 'shopping', objective: 'Find product-search or price-comparison capabilities, not purchase or checkout', numResults: 10,
     });
     return { ok: true, json: async () => ({ agents: [], results: [] }) };
   };
-  await search('running shoes', { category: 'shopping', objective: 'Prefer quote-capable shopping agents', numResults: 10, fetchImpl });
+  await search('running shoes', { category: 'shopping', objective: 'Find product-search or price-comparison capabilities, not purchase or checkout', numResults: 10, fetchImpl });
+});
+
+test('Shopping recipe only offers product research candidates', () => {
+  assert.equal(isShoppingResearchCandidate({ name: 'product-search', description: 'Google Shopping results with prices' }), true);
+  assert.equal(isShoppingResearchCandidate({ name: 'Merchant check', description: 'Is this online store safe to buy from?' }), false);
+  assert.equal(isShoppingResearchCandidate({ name: 'Shopping guide', description: 'When-to-use shopping workflow' }), false);
+  assert.equal(isShoppingResearchCandidate({ name: 'Checkout', description: 'Purchase a product from shopping results' }), false);
 });
 
 test('Act fails closed for a non-executable Search result', async () => {

@@ -1,4 +1,5 @@
 import { choices, search } from '../lib/darwin.mjs';
+import { isShoppingResearchCandidate } from '../lib/recipe.mjs';
 
 const scenarios = [
   {
@@ -23,8 +24,8 @@ const scenarios = [
   },
   {
     name: 'Shopping concierge', query: 'running shoes', category: 'shopping',
-    objective: 'Prefer quote-capable shopping agents', minimumAgents: 2,
-    relevant: (item) => /shopping|product.search|quote|offer|seller/i.test(`${item.name} ${item.agentName}`),
+    objective: 'Find product-search or price-comparison capabilities, not purchase or checkout', minimumAgents: 2,
+    relevant: isShoppingResearchCandidate,
   },
   {
     name: 'Accessibility review', query: 'WCAG accessibility audit website', minimumAgents: 1,
