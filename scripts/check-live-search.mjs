@@ -1,4 +1,5 @@
 import { choices, search } from '../lib/darwin.mjs';
+import { searchLatencyBudgetMs, searchLatencyPasses } from '../lib/preflight.mjs';
 import { findCandidates, isAccessibilityAuditCandidate, isSecurityHeadersCandidate, isShoppingResearchCandidate } from '../lib/recipe.mjs';
 
 const scenarios = [
@@ -62,9 +63,12 @@ for (const { name, query, category, objective, fallbackQuery, numResults = 10, m
     const readyAgents = new Set(relevantResults.filter((item) => item.canStartThread && item.readiness === 'ready').map((item) => item.agent));
     const recheckAgents = new Set(relevantResults.filter((item) => item.canAttemptThread && item.readiness === 'recheck_available').map((item) => item.agent));
     readyByScenario.set(name, readyAgents);
-    if (readyAgents.size < minimumAgents || (requireRelevantFirst && !firstIsRelevant)) failed = true;
+    const elapsedMs = Math.round(performance.now() - started);
+    const latencyOptions = { broadened: Boolean(found.broadened) };
+    const fastEnough = searchLatencyPasses(elapsedMs, latencyOptions);
+    if (readyAgents.size < minimumAgents || (requireRelevantFirst && !firstIsRelevant) || !fastEnough) failed = true;
     const reasons = [...new Set(relevantResults.filter((item) => !item.canStartThread).map((item) => item.threadUnavailableReason).filter(Boolean))];
-    console.log(`${name}: ${found.outcome}${found.broadened ? ' (broadened provider discovery)' : ''}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${minimumAgents ? `${readyAgents.size}/${minimumAgents} executable agents, ${recheckAgents.size} first-use rechecks (not yet proven)` : 'Search-only example; Act not required'}${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
+    console.log(`${name}: ${found.outcome}${found.broadened ? ' (broadened provider discovery)' : ''}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${minimumAgents ? `${readyAgents.size}/${minimumAgents} executable agents, ${recheckAgents.size} first-use rechecks (not yet proven)` : 'Search-only example; Act not required'}${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${elapsedMs} ms${fastEnough ? '' : ` (SLOW: over ${searchLatencyBudgetMs(latencyOptions)} ms budget)`}`);
   } catch (error) {
     failed = true;
     console.error(`${name}: ${error.message} (${Math.round(performance.now() - started)} ms)`);
@@ -77,6 +81,6 @@ if (accessibility.size && security.size && new Set([...accessibility, ...securit
   console.error('The release-gate checks need two distinct executable agents.');
 }
 if (failed) {
-  console.error('At least one cookbook or Quickstart scenario lacks relevant top results or the executable agents it needs. Act demos are not ready.');
+  console.error('At least one cookbook or Quickstart scenario is slow, lacks relevant top results, or lacks the executable agents it needs. Act demos are not ready.');
   process.exitCode = 1;
 }
