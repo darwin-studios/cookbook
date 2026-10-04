@@ -16,6 +16,12 @@ const scenarios = [
     relevant: isAccessibilityAuditCandidate,
   },
   {
+    name: 'Browse Search guide invoice extraction', query: 'OCR API for handwritten invoices that returns structured JSON',
+    numResults: 5, minimumAgents: 0, requireRelevantFirst: true,
+    relevant: (item) => /invoice/i.test(`${item.name} ${item.description}`)
+      && /extract|pars|ocr|structured json/i.test(`${item.name} ${item.description}`),
+  },
+  {
     name: 'Assistant diagnostic', query: 'MCP server health diagnostic whoami tool', numResults: 8,
     objective: 'Find an agent able to complete this exact task: MCP server health diagnostic whoami tool', minimumAgents: 1,
     relevant: (item) => /whoami|health diagnostic/i.test(`${item.name} ${item.description}`),
@@ -58,7 +64,7 @@ for (const { name, query, category, objective, fallbackQuery, numResults = 10, m
     readyByScenario.set(name, readyAgents);
     if (readyAgents.size < minimumAgents || (requireRelevantFirst && !firstIsRelevant)) failed = true;
     const reasons = [...new Set(relevantResults.filter((item) => !item.canStartThread).map((item) => item.threadUnavailableReason).filter(Boolean))];
-    console.log(`${name}: ${found.outcome}${found.broadened ? ' (broadened provider discovery)' : ''}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${readyAgents.size}/${minimumAgents} executable agents, ${recheckAgents.size} first-use rechecks (not yet proven)${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
+    console.log(`${name}: ${found.outcome}${found.broadened ? ' (broadened provider discovery)' : ''}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${minimumAgents ? `${readyAgents.size}/${minimumAgents} executable agents, ${recheckAgents.size} first-use rechecks (not yet proven)` : 'Search-only example; Act not required'}${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
   } catch (error) {
     failed = true;
     console.error(`${name}: ${error.message} (${Math.round(performance.now() - started)} ms)`);
