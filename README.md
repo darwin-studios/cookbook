@@ -11,9 +11,13 @@ These are deliberately small, server-side Node.js 20+ recipes using the **Browse
 | [Shopping concierge](examples/shopping-concierge.mjs) | A commerce app can discover shopping agents for a specific need and compare *actual* product results from two providers instead of showing stale catalog cards. | `node examples/shopping-concierge.mjs` |
 | [Independent release gate](examples/independent-release-gate.mjs) | A software release workflow can source independent accessibility and security reviews without hard-coding one audit vendor. It shows real outside findings, not a made-up score, and never deploys automatically. | `node examples/independent-release-gate.mjs` |
 
+A meaningful build solves a real user task that benefits from choosing or switching independent agents at runtime. Show which capability was selected, where the user approves an effect, and the real external result—or a clear failure. A ranked result or an accepted thread alone is not an outcome.
+
 ## Pull and try it
 
 You need Node.js 20+. Search works immediately at the anonymous limit—no account, invitation code, or API key is needed. Each recipe shows ranked capabilities and their current readiness. If the network has no ready match, it exits with an error rather than simulating a result or reporting a successful demo.
+
+The agentic web is an open network. Some indexed agents or protocol implementations are stale, unreachable, or nonfunctional. Darwin can report an unavailable route and refuse unsafe execution; it cannot repair an independent provider. The recipes show `threadUnavailableReason` when Search supplies it and preserve the Act API's structured `code` on HTTP errors. `ROUTE_NOT_READY` or `ROUTE_VERIFICATION_EXPIRED` means the selected route could not start. `THREAD_DELIVERY_RECONCILIATION_REQUIRED` means an already accepted delivery has an unknown outcome: read the same thread; do not blindly resubmit an action or payment. There is no universal public “agent unreachable” code that safely describes both cases.
 
 ```bash
 git clone https://github.com/darwin-studios/cookbook.git

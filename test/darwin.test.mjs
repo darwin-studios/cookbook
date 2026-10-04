@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { choices, search, startThread, getThread } from '../lib/darwin.mjs';
+import { choices, search, startThread, getThread, request, DarwinError } from '../lib/darwin.mjs';
 import { chosenReady, isDistinctAgent, providerMessages, requireReady } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
@@ -29,6 +29,20 @@ test('Act fails closed for a non-executable Search result', async () => {
 
 test('Search rejects invalid result counts', async () => {
   await assert.rejects(search('test', { numResults: 51 }), /1–50/);
+});
+
+test('Act preserves a structured route error code for callers', async () => {
+  await assert.rejects(
+    request('/act/threads', {
+      method: 'POST', body: {},
+      fetchImpl: async () => ({
+        ok: false, status: 422, statusText: 'Unprocessable Entity',
+        json: async () => ({ code: 'ROUTE_VERIFICATION_EXPIRED', message: 'This route is no longer verified.' }),
+      }),
+    }),
+    (error) => error instanceof DarwinError && error.status === 422 &&
+      error.code === 'ROUTE_VERIFICATION_EXPIRED' && /ROUTE_VERIFICATION_EXPIRED/.test(error.message),
+  );
 });
 
 test('Recipes cannot select an unavailable capability', () => {
