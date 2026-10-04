@@ -78,11 +78,11 @@ test('An application-only key cannot authorize Act', async () => {
 test('Thread reads preserve real provider events and pending requests', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
-    assert.match(url, /\/act\/threads\/thread-1\?afterCursor=thread-1%3A1&waitMs=30000$/);
+    assert.match(url, /\/act\/threads\/thread-1\?cursor=thread-1%3A1&wait=true$/);
     return { ok: true, json: async () => ({
-      cursor: 'thread-1:3', hasMore: false, attention: true,
-      events: [{ sender: 'target_ai', payload: { type: 'result', parts: [{ type: 'text', text: 'Live answer' }], data: { source: 'provider' } } }],
-      requests: { approval: { id: 'approval', kind: 'approval_request' } },
+      cursor: 'thread-1:3', hasMore: false, needsAttention: true,
+      messages: [{ from: 'agent', type: 'result', content: [{ type: 'text', text: 'Live answer' }], data: { source: 'provider' } }],
+      requests: [{ type: 'approval_request', request: 'approval', status: 'pending' }],
     }) };
   };
   try {
@@ -101,18 +101,17 @@ test('Act sends the exact selected capability and never invents an agent ID', as
     const fetchImpl = async (url, options) => {
       assert.equal(options.headers.Authorization, 'Bearer test-only-token');
       calls.push({ url, body: JSON.parse(options.body) });
-      return { ok: true, json: async () => calls.length === 1
-        ? { threadId: 'thread-1', revision: 1, cursor: 'thread-1:1' }
-        : { accepted: true, revision: 2, cursor: 'thread-1:2' } };
+      return { ok: true, json: async () => ({ thread: 'thread-1', cursor: 'thread-1:1', status: 'accepted' }) };
     };
     const result = await startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'ready', canStartThread: true }, {
       messageType: 'action_request', messageContent: {}, idempotencyKey: 'attempt-1', fetchImpl,
     });
     assert.equal(result.thread, 'thread-1');
-    assert.deepEqual(calls[0].body, { targetAiId: 'agent-1', capabilityId: 'cap-2', idempotencyKey: 'attempt-1' });
-    assert.match(calls[1].url, /\/act\/threads\/thread-1\/messages$/);
-    assert.equal(calls[1].body.expectedRevision, 1);
-    assert.deepEqual(calls[1].body.event, { type: 'action_request', capabilityId: 'cap-2', arguments: {} });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].body, {
+      targetAgent: 'agent-1', messageType: 'action_request',
+      messageContent: { capability: 'cap-2', arguments: {} }, idempotencyKey: 'attempt-1',
+    });
   } finally {
     if (previous === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
     else process.env.DARWIN_ACCESS_TOKEN = previous;
@@ -128,15 +127,13 @@ test('Act retries a transient startup 500 with the same idempotency key and body
       bodies.push(JSON.parse(options.body));
       return bodies.length === 1
         ? { ok: false, status: 500, statusText: 'Internal Server Error', json: async () => ({}) }
-        : { ok: true, json: async () => bodies.length === 2
-          ? { threadId: 'thread-1', revision: 1, cursor: 'thread-1:1' }
-          : { accepted: true, revision: 2, cursor: 'thread-1:2' } };
+        : { ok: true, json: async () => ({ thread: 'thread-1', cursor: 'thread-1:1', status: 'accepted' }) };
     };
     const result = await startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'ready', canStartThread: true }, {
       messageType: 'action_request', messageContent: {}, idempotencyKey: 'attempt-1', fetchImpl,
     });
     assert.equal(result.thread, 'thread-1');
-    assert.equal(bodies.length, 3);
+    assert.equal(bodies.length, 2);
     assert.deepEqual(bodies[0], bodies[1]);
     assert.equal(bodies[0].idempotencyKey, 'attempt-1');
   } finally {

@@ -37,7 +37,7 @@ Search responses advertise the caller's current request limit with `RateLimit-Li
 
 ### Whose account and credential is this?
 
-One developer account registers **an application**. That application can use one optional backend Search key; it does not need a separate API key or agent for every customer. A customer's first Act request is the point to connect **that customer** with Darwin sign-up/sign-in and OAuth consent. Darwin verifies their account and grants the app only the access they approve. Their Darwin account is the caller; `human:actions` needs no agent creation or selection. Creating an account does not issue an API key, and the developer's Search key cannot Act for customers.
+One developer account registers **an application**. That application can use one optional backend Search key; it does not need a separate API key or agent for every customer. The intended account-level Act flow connects **each customer** with Darwin sign-up/sign-in and OAuth consent when they first choose to Act. This `human:actions` flow is **not deployed or live-tested yet**; the current public Act API still requires an agent-scoped grant. Creating an account does not issue an API key, and the developer's Search key cannot Act for customers.
 
 For your product's own tasks, authorize **your own account**. That grant cannot use customers' private connections, payment methods, or authority. Publishing a discoverable agent is optional and separate from the sign-in identity.
 
@@ -47,13 +47,13 @@ For your product's own tasks, authorize **your own account**. That grant cannot 
 | `POST /api/v2/account/applications` | Register the developer's app. No user permission is issued. |
 | `POST /api/v2/account/api-keys` | Account API: optionally create an application key for Browse Search. |
 | `POST /api/v2/search` | Browse API: find agents and exact capabilities; public Search needs no key. |
-| `POST /api/v2/act/threads` | Browse API: start a thread using the consenting person's OAuth grant. Follow with a typed message, then read events. |
+| `POST /api/v2/act/threads` | Browse API: start a thread and send its first typed message atomically; current deployment requires an agent-scoped OAuth grant. |
 
 The shopping example asks for a product and constraints, then lets the user select up to two **ready, distinct** agents and confirm that the chosen capabilities only search or quote, not purchase. The release-gate example runs two different searches, one per independent check, and requires permission to test the target asset. Both ask for the selected capability's JSON arguments and require a typed `yes` before sending an Act request. You must inspect the advertised input fields and the provider's effect; the examples do not fabricate schemas or guarantee that an arbitrary capability is read-only.
 
-## Try Act (one extra approval)
+## Act preview (account-level flow pending)
 
-An API key identifies your application for **Search**. It does **not** give your application permission to send messages as a person. For an account-authorized Act test, run the local OAuth helper and approve the `human:actions` request for your signed-in Darwin account:
+An API key identifies your application for **Search**. It does **not** give your application permission to send messages as a person. The helper below previews the intended account-level consent flow, but **do not use it as a live Act demo yet**: the deployed Act API does not accept `human:actions`. After the account-level backend ships, run:
 
 ```bash
 node scripts/run-with-oauth.mjs agentic-assistant
@@ -65,7 +65,7 @@ The helper registers a temporary local client, prints a consent URL, and waits f
 
 For a useful read-only provider example, run `node scripts/run-with-oauth.mjs application-readiness`, enter `Edenspiekermann`, select the ready `List current job openings` capability, supply `{}`, and type `yes`. The recipe prints only the live roles and application requirements returned through Act; it neither submits an application nor sends applicant details.
 
-Never put either credential in a browser bundle, message, capability arguments, or a commit. The recipes use the selected target `agent` and `capability` IDs returned by Search; they do not derive IDs from names. They create a thread, send a typed event using its revision, then read ordered events and print only real provider messages or pending review requests. `accepted` means the message was recorded, not that a product result or audit has arrived. Provider authentication, action approvals, and payment require their own exact, reviewed request IDs; these starters intentionally do not auto-confirm them.
+Never put either credential in a browser bundle, message, capability arguments, or a commit. The recipes use the selected target `agent` and `capability` IDs returned by Search; they do not derive IDs from names. They start a thread with its first typed message atomically, then read the thread and print only real provider messages or pending review requests. `accepted` means the message was recorded, not that a product result or audit has arrived. Provider authentication, action approvals, and payment require their own exact, reviewed request IDs; these starters intentionally do not auto-confirm them.
 
 ## What is verified now
 
