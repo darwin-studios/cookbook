@@ -8,6 +8,10 @@ if (!recipe || !['agentic-assistant', 'shopping-concierge', 'independent-release
   console.error('Usage: node scripts/run-with-oauth.mjs <agentic-assistant|shopping-concierge|independent-release-gate|application-readiness>');
   process.exit(2);
 }
+if (process.env.DARWIN_ENABLE_ACCOUNT_ACT_PREVIEW !== '1') {
+  console.error('Account-level Act is not deployed. This helper cannot run a live Act recipe yet; Search examples work without OAuth.');
+  process.exit(2);
+}
 
 const issuer = 'https://darwin.so/api/customer/auth';
 const metadataResponse = await fetch(`${issuer}/.well-known/openid-configuration`);

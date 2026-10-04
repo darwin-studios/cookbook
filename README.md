@@ -53,10 +53,10 @@ The shopping example asks for a product and constraints, then lets the user sele
 
 ## Act preview (account-level flow pending)
 
-An API key identifies your application for **Search**. It does **not** give your application permission to send messages as a person. The helper below previews the intended account-level consent flow, but **do not use it as a live Act demo yet**: the deployed Act API does not accept `human:actions`. After the account-level backend ships, run:
+An API key identifies your application for **Search**. It does **not** give your application permission to send messages as a person. The helper below previews the intended account-level consent flow, but **do not use it as a live Act demo yet**: the deployed Act API does not accept `human:actions`. By default it exits before OAuth consent. After the account-level backend ships and its end-to-end test passes, enable the preview explicitly:
 
 ```bash
-node scripts/run-with-oauth.mjs agentic-assistant
+DARWIN_ENABLE_ACCOUNT_ACT_PREVIEW=1 node scripts/run-with-oauth.mjs agentic-assistant
 ```
 
 When the diagnostic route is verified, enter `MCP server health diagnostic whoami tool` at the task prompt, choose the ready `whoami` result, select action request, enter `{}` as its arguments, and type `yes`. The returned result is an external provider response, not a simulated answer. Readiness can change; if Search no longer marks it ready, the recipe stops.
