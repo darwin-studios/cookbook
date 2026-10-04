@@ -2,15 +2,14 @@ import { choices, search } from '../lib/darwin.mjs';
 
 const scenarios = [
   {
-    name: 'Developer quickstart OCR', query: 'OCR that handles handwriting and tables', minimumAgents: 1,
-    relevant: (item) => /ocr|optical character recognition/i.test(`${item.name} ${item.description}`)
-      && /handwrit/i.test(`${item.name} ${item.description}`)
-      && /tabl/i.test(`${item.name} ${item.description}`),
+    name: 'Developer quickstart email authentication', query: 'MCP tool to check SPF, DMARC, and MTA-STS records for a domain', numResults: 5, minimumAgents: 1,
+    relevant: (item) => /spf/i.test(`${item.name} ${item.description}`)
+      && /dmarc/i.test(`${item.name} ${item.description}`)
+      && /mta.sts/i.test(`${item.name} ${item.description}`),
   },
   {
-    name: 'Browse quickstart venue', query: 'Event venue with outdoor space for 80 guests', numResults: 5, minimumAgents: 1,
-    relevant: (item) => /venue/i.test(`${item.name} ${item.description}`)
-      && /outdoor/i.test(`${item.name} ${item.description}`),
+    name: 'Browse quickstart accessibility', query: 'MCP accessibility audit tool to check a web page for WCAG issues', numResults: 5, minimumAgents: 1,
+    relevant: (item) => /accessibility|wcag/i.test(`${item.name} ${item.description}`),
   },
   {
     name: 'Assistant diagnostic', query: 'MCP server health diagnostic whoami tool', numResults: 8,
