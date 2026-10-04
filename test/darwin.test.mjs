@@ -79,14 +79,14 @@ test('Act preserves a structured route error code for callers', async () => {
 
 test('Public MCP tool-selection conflict preserves exact choices and does not retry', async () => {
   const details = {
-    code: 'THREAD_TOOL_SELECTION_REQUIRED', targetAiId: 'mcp-agent',
+    code: 'THREAD_TOOL_SELECTION_REQUIRED', targetAgent: 'mcp-agent',
     expiresAt: '2026-10-04T00:00:00.000Z',
     capabilities: [{ capability: 'public-mcp:abc', title: 'whoami', inputSchema: { type: 'object' },
       effect: 'external_effect', pricing: 'unknown', requiresConfirmation: true }],
   };
   let calls = 0;
   await assert.rejects(request('/act/threads', {
-    method: 'POST', body: { targetAiId: 'mcp-agent' }, fetchImpl: async () => {
+    method: 'POST', body: { targetAgent: 'mcp-agent' }, fetchImpl: async () => {
       calls++;
       return { ok: false, status: 409, statusText: 'Conflict', json: async () => details };
     },
@@ -109,23 +109,22 @@ test('Independent checks cannot count two tools from the same agent as separate 
   assert.equal(isDistinctAgent([{ agent: 'auditor-a' }], { agent: 'auditor-b' }), true);
 });
 
-test('Darwin status events are not presented as provider responses', () => {
+test('Caller messages are not presented as provider responses', () => {
   assert.deepEqual(providerMessages([
-    { sender: 'acting_ai', payload: { type: 'message', parts: [{ type: 'text', text: 'sent' }] } },
-    { sender: 'runtime', payload: { type: 'status', status: 'running' } },
-    { sender: 'target_ai', payload: { type: 'message', parts: [{ type: 'text', text: 'actual-response' }] } },
-  ]).map((event) => event.payload.parts[0].text), ['actual-response']);
+    { from: 'you', type: 'message', content: [{ type: 'text', text: 'sent' }] },
+    { from: 'agent', type: 'message', content: [{ type: 'text', text: 'actual-response' }] },
+  ]).map((message) => message.content[0].text), ['actual-response']);
 });
 
-test('Runtime-relayed operation results count as outcomes, not just target messages', () => {
+test('Darwin-relayed operation results count as outcomes, not just agent messages', () => {
   assert.deepEqual(providerMessages([
-    { sender: 'runtime', payload: { type: 'result', parts: [{ type: 'text', text: 'External tool answered' }], data: { answered_by: { tool: 'whoami' } } } },
-  ]).map((event) => event.payload.type), ['result']);
+    { from: 'darwin', type: 'result', content: [{ type: 'text', text: 'External tool answered' }], data: { answered_by: { tool: 'whoami' } } },
+  ]).map((message) => message.type), ['result']);
 });
 
-test('An interim target message is not a completed action result', () => {
-  assert.equal(hasProviderResult([{ sender: 'target_ai', payload: { type: 'message', parts: [{ type: 'text', text: 'Working on it' }] } }]), false);
-  assert.equal(hasProviderResult([{ sender: 'runtime', payload: { type: 'result', parts: [{ type: 'text', text: 'Done' }] } }]), true);
+test('An interim agent message is not a completed action result', () => {
+  assert.equal(hasProviderResult([{ from: 'agent', type: 'message', content: [{ type: 'text', text: 'Working on it' }] }]), false);
+  assert.equal(hasProviderResult([{ from: 'darwin', type: 'result', content: [{ type: 'text', text: 'Done' }] }]), true);
 });
 
 test('An application-only key cannot authorize Act', async () => {
@@ -143,26 +142,26 @@ test('An application-only key cannot authorize Act', async () => {
   }
 });
 
-test('Thread reads use afterCursor and preserve typed provider events', async () => {
+test('Public thread reads use cursor and preserve provider results', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
-    assert.match(url, /\/act\/threads\/thread-1\?afterCursor=thread-1%3A1&waitMs=30000$/);
+    assert.match(url, /\/act\/threads\/thread-1\?cursor=thread-1%3A1&wait=true$/);
     return { ok: true, json: async () => ({
-      threadId: 'thread-1', cursor: 'thread-1:3', hasMore: false, attention: true,
-      events: [{ sender: 'runtime', payload: { type: 'result', parts: [{ type: 'text', text: 'Live answer' }], data: { source: 'provider' } } }],
-      operations: { 'op-1': { id: 'op-1', status: 'succeeded' } },
-      requests: { approval: { id: 'approval', kind: 'approval_request' } },
+      thread: 'thread-1', cursor: 'thread-1:3', hasMore: false, needsAttention: true,
+      messages: [{ from: 'darwin', type: 'result', content: [{ type: 'text', text: 'Live answer' }], data: { source: 'provider' } }],
+      actions: [{ action: 'op-1', status: 'succeeded' }],
+      requests: [{ request: 'approval', type: 'approval_request', status: 'pending' }],
     }) };
   };
   try {
-    const state = await getThread('thread-1', { afterCursor: 'thread-1:1', waitMs: 30_000 });
-    assert.equal(state.events[0].sender, 'runtime');
-    assert.equal(state.events[0].payload.parts[0].text, 'Live answer');
-    assert.equal(state.requests.approval.kind, 'approval_request');
+    const state = await getThread('thread-1', { cursor: 'thread-1:1', wait: true });
+    assert.equal(state.messages[0].from, 'darwin');
+    assert.equal(state.messages[0].content[0].text, 'Live answer');
+    assert.equal(state.requests[0].type, 'approval_request');
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test('Act starts a thread for the exact Search target and capability, without sending work', async () => {
+test('Public Act starts a thread and atomically sends the exact action request', async () => {
   const previous = process.env.DARWIN_ACCESS_TOKEN;
   process.env.DARWIN_ACCESS_TOKEN = 'test-only-token';
   try {
@@ -170,14 +169,17 @@ test('Act starts a thread for the exact Search target and capability, without se
     const fetchImpl = async (url, options) => {
       assert.equal(options.headers.Authorization, 'Bearer test-only-token');
       calls.push({ url, body: JSON.parse(options.body) });
-      return { ok: true, json: async () => ({ threadId: 'thread-1', revision: 0, cursor: 'thread-1:0', capabilities: [{ capabilityId: 'cap-2' }] }) };
+      return { ok: true, json: async () => ({ thread: 'thread-1', message: 'message-1', status: 'accepted', cursor: 'thread-1:1', idempotencyKey: 'attempt-1' }) };
     };
     const result = await startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'ready', canStartThread: true }, {
-      idempotencyKey: 'attempt-1', fetchImpl,
+      messageType: 'action_request', messageContent: { domain: 'example.com' }, idempotencyKey: 'attempt-1', fetchImpl,
     });
-    assert.equal(result.threadId, 'thread-1');
+    assert.equal(result.thread, 'thread-1');
     assert.equal(calls.length, 1);
-    assert.deepEqual(calls[0].body, { targetAiId: 'agent-1', capabilityId: 'cap-2', idempotencyKey: 'attempt-1' });
+    assert.deepEqual(calls[0].body, {
+      targetAgent: 'agent-1', messageType: 'action_request',
+      messageContent: { capability: 'cap-2', arguments: { domain: 'example.com' } }, idempotencyKey: 'attempt-1',
+    });
   } finally {
     if (previous === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
     else process.env.DARWIN_ACCESS_TOKEN = previous;
@@ -195,7 +197,7 @@ test('Act does not replay an uncertain thread-start failure', async () => {
         json: async () => ({ code: 'THREAD_DELIVERY_RECONCILIATION_REQUIRED' }) };
     };
     await assert.rejects(startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'ready', canStartThread: true }, {
-      idempotencyKey: 'attempt-1', fetchImpl,
+      messageType: 'action_request', messageContent: {}, idempotencyKey: 'attempt-1', fetchImpl,
     }), (error) => error instanceof DarwinError && error.code === 'THREAD_DELIVERY_RECONCILIATION_REQUIRED');
     assert.equal(bodies.length, 1);
     assert.equal(bodies[0].idempotencyKey, 'attempt-1');
@@ -205,22 +207,21 @@ test('Act does not replay an uncertain thread-start failure', async () => {
   }
 });
 
-test('Act sends an action only after validating the thread catalog and revision', async () => {
+test('Public Act sends a typed follow-up with an exact capability and stable key', async () => {
   const previous = process.env.DARWIN_ACCESS_TOKEN;
   process.env.DARWIN_ACCESS_TOKEN = 'test-only-token';
-  const started = { threadId: 'thread-1', revision: 0, cursor: 'thread-1:0', capabilities: [{ capabilityId: 'cap-2' }] };
+  const started = { thread: 'thread-1', cursor: 'thread-1:1' };
   const choice = { capability: 'cap-2' };
   try {
     const calls = [];
     const fetchImpl = async (url, options) => {
       calls.push({ url, body: JSON.parse(options.body) });
-      return { ok: true, json: async () => ({ accepted: true, eventId: 'event-1', revision: 1, cursor: 'thread-1:1', delivery: 'accepted' }) };
+      return { ok: true, json: async () => ({ thread: 'thread-1', message: 'message-2', status: 'accepted', cursor: 'thread-1:2', idempotencyKey: 'msg-1' }) };
     };
-    await sendThreadMessage(started, choice, { messageType: 'action_request', messageContent: {}, clientMessageId: 'msg-1', fetchImpl });
+    await sendThreadMessage(started, choice, { messageType: 'action_request', messageContent: {}, idempotencyKey: 'msg-1', fetchImpl });
     assert.match(calls[0].url, /\/act\/threads\/thread-1\/messages$/);
     assert.deepEqual(calls[0].body, {
-      clientMessageId: 'msg-1', expectedRevision: 0,
-      event: { type: 'action_request', capabilityId: 'cap-2', arguments: {} },
+      messageType: 'action_request', messageContent: { capability: 'cap-2', arguments: {} }, idempotencyKey: 'msg-1',
     });
   } finally {
     if (previous === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
@@ -228,16 +229,16 @@ test('Act sends an action only after validating the thread catalog and revision'
   }
 });
 
-test('Act refuses a capability missing from the thread catalog without sending', async () => {
+test('Act refuses an action without an exact capability before sending', async () => {
   const previous = process.env.DARWIN_ACCESS_TOKEN;
   process.env.DARWIN_ACCESS_TOKEN = 'test-only-token';
   let calls = 0;
   try {
     await assert.rejects(sendThreadMessage(
-      { threadId: 'thread-1', revision: 0, capabilities: [{ capabilityId: 'other-capability' }] },
-      { capability: 'cap-2' },
+      { thread: 'thread-1' },
+      {},
       { messageType: 'action_request', messageContent: {}, fetchImpl: async () => { calls++; } },
-    ), /absent from this thread’s executable catalog/);
+    ), /exact capability/);
     assert.equal(calls, 0);
   } finally {
     if (previous === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
@@ -245,20 +246,19 @@ test('Act refuses a capability missing from the thread catalog without sending',
   }
 });
 
-test('Ordinary conversation sends a typed text event, not an action', async () => {
+test('Ordinary conversation sends plain text, not an action request', async () => {
   const previous = process.env.DARWIN_ACCESS_TOKEN;
   process.env.DARWIN_ACCESS_TOKEN = 'test-only-token';
   try {
     let body;
     await sendThreadMessage(
-      { threadId: 'thread-1', revision: 4, capabilities: [] },
+      { thread: 'thread-1' },
       {},
-      { messageType: 'message', messageContent: '  Can you help?  ', clientMessageId: 'message-1',
+      { messageType: 'message', messageContent: '  Can you help?  ', idempotencyKey: 'message-1',
         fetchImpl: async (_url, options) => { body = JSON.parse(options.body); return { ok: true, json: async () => ({ accepted: true }) }; } },
     );
     assert.deepEqual(body, {
-      clientMessageId: 'message-1', expectedRevision: 4,
-      event: { type: 'message', parts: [{ type: 'text', text: 'Can you help?' }] },
+      messageType: 'message', messageContent: 'Can you help?', idempotencyKey: 'message-1',
     });
   } finally {
     if (previous === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
@@ -266,15 +266,15 @@ test('Ordinary conversation sends a typed text event, not an action', async () =
   }
 });
 
-test('Act never replays an uncertain typed-message delivery', async () => {
+test('Act never replays an uncertain follow-up delivery', async () => {
   const previous = process.env.DARWIN_ACCESS_TOKEN;
   process.env.DARWIN_ACCESS_TOKEN = 'test-only-token';
   let sends = 0;
   try {
     await assert.rejects(sendThreadMessage(
-      { threadId: 'thread-1', revision: 0, cursor: 'thread-1:0', capabilities: [{ capabilityId: 'cap-2' }] },
+      { thread: 'thread-1' },
       { capability: 'cap-2' },
-      { messageType: 'action_request', messageContent: {}, clientMessageId: 'msg-1', fetchImpl: async () => {
+      { messageType: 'action_request', messageContent: {}, idempotencyKey: 'msg-1', fetchImpl: async () => {
         sends++;
         return { ok: false, status: 503, statusText: 'Service Unavailable',
           json: async () => ({ code: 'THREAD_DELIVERY_RECONCILIATION_REQUIRED' }) };
@@ -292,7 +292,7 @@ test('A thread error is displayed as failure, not a provider answer', () => {
   const originalLog = console.log;
   console.log = (...values) => lines.push(values.join(' '));
   try {
-    showOutcome('Specialist', { thread: 'thread-1', events: [],
+    showOutcome('Specialist', { thread: 'thread-1', messages: [],
       errors: [{ code: 'ACTION_FAILED', retryable: false }] });
   } finally { console.log = originalLog; }
   assert.match(lines.join('\n'), /Provider\/runtime error ACTION_FAILED/);
@@ -305,8 +305,8 @@ test('Thread reads stop on a failed action without claiming a provider answer', 
   globalThis.fetch = async () => {
     reads++;
     return { ok: true, json: async () => ({
-      threadId: 'thread-1', cursor: 'thread-1:2', hasMore: false, attention: false, requests: {}, events: [],
-      operations: { 'action-1': { id: 'action-1', status: 'failed' } },
+      thread: 'thread-1', cursor: 'thread-1:2', hasMore: false, needsAttention: false, requests: [], messages: [],
+      actions: [{ action: 'action-1', status: 'failed' }],
     }) };
   };
   try {
@@ -324,19 +324,19 @@ test('Thread reads stop on any pending review without confirming it', async () =
   globalThis.fetch = async () => {
     reads++;
     return { ok: true, json: async () => ({
-      threadId: 'thread-1', cursor: 'thread-1:2', hasMore: false, attention: true, events: [], operations: {},
-      requests: {
-        'review-1': { id: 'review-1', kind: 'approval_request' },
-        'review-2': { id: 'review-2', kind: 'completion_request' },
-        'resolved-3': { id: 'resolved-3', kind: 'authentication_request', resolvedBy: 'confirmation-3' },
-      },
+      thread: 'thread-1', cursor: 'thread-1:2', hasMore: false, needsAttention: true, messages: [], actions: [],
+      requests: [
+        { request: 'review-1', type: 'approval_request', status: 'pending' },
+        { request: 'review-2', type: 'completion_request', status: 'pending' },
+        { request: 'resolved-3', type: 'authentication_request', status: 'resolved' },
+      ],
     }) };
   };
   try {
     const outcome = await readThread('thread-1', 'thread-1:1', { requireResult: true });
     assert.equal(reads, 1);
-    assert.deepEqual(outcome.pending.map((request) => request.id), ['review-1', 'review-2']);
-    assert.equal(hasProviderResult(outcome.events), false);
+    assert.deepEqual(outcome.pending.map((request) => request.request), ['review-1', 'review-2']);
+    assert.equal(hasProviderResult(outcome.messages), false);
   } finally {
     globalThis.fetch = originalFetch;
     console.log = originalLog;
