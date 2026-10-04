@@ -9,10 +9,11 @@ try {
   const need = await io.ask('What are you shopping for? ');
   if (!need) process.exit(0);
   const constraints = await io.ask('Budget, delivery, condition, warranty, or other non-negotiables: ');
-  // Category keeps an ordinary product request focused on shopping agents.
-  // Keep budget and other constraints for the selected provider's live request.
+  // A specific model may not occur in the index even when a general shopping
+  // provider can search for it. Broaden discovery only; keep the exact request
+  // and constraints for the selected provider's live call.
   const ranked = await discover('Shopping research agents', need, 'Find product-search or price-comparison capabilities, not purchase or checkout', {
-    category: 'shopping', select: isShoppingResearchCandidate,
+    category: 'shopping', select: isShoppingResearchCandidate, fallbackQuery: 'product search',
   });
   requireReady(ranked, 'shopping');
   const raw = await io.ask('Choose up to two READY product-search or quote capabilities (comma-separated): ');

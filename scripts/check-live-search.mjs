@@ -1,5 +1,5 @@
 import { choices, search } from '../lib/darwin.mjs';
-import { isShoppingResearchCandidate } from '../lib/recipe.mjs';
+import { findCandidates, isShoppingResearchCandidate } from '../lib/recipe.mjs';
 
 const scenarios = [
   {
@@ -27,7 +27,7 @@ const scenarios = [
     relevant: (item) => /Edenspiekermann/i.test(item.agentName) && /list current job openings/i.test(item.name),
   },
   {
-    name: 'Shopping concierge', query: 'running shoes', category: 'shopping',
+    name: 'Shopping concierge', query: 'refurbished MacBook Air M4', category: 'shopping', fallbackQuery: 'product search',
     objective: 'Find product-search or price-comparison capabilities, not purchase or checkout', minimumAgents: 2,
     relevant: isShoppingResearchCandidate,
   },
@@ -44,19 +44,21 @@ const scenarios = [
 ];
 let failed = false;
 const readyByScenario = new Map();
-for (const { name, query, category, objective, numResults = 10, minimumAgents, requireRelevantFirst = false, relevant } of scenarios) {
+for (const { name, query, category, objective, fallbackQuery, numResults = 10, minimumAgents, requireRelevantFirst = false, relevant } of scenarios) {
   const started = performance.now();
   try {
-    const found = await search(query, { category, objective, numResults });
-    const ranked = choices(found);
-    if (!Array.isArray(found.agents) || !Array.isArray(found.results)) throw new Error('Invalid Search response shape');
+    const found = fallbackQuery
+      ? await findCandidates(query, objective, { category, fallbackQuery, select: relevant })
+      : await search(query, { category, objective, numResults });
+    const ranked = fallbackQuery ? found.ranked : choices(found);
+    if (!fallbackQuery && (!Array.isArray(found.agents) || !Array.isArray(found.results))) throw new Error('Invalid Search response shape');
     const relevantResults = ranked.filter(relevant);
     const firstIsRelevant = Boolean(ranked[0] && relevant(ranked[0]));
     const readyAgents = new Set(relevantResults.filter((item) => item.canStartThread && item.readiness === 'ready').map((item) => item.agent));
     readyByScenario.set(name, readyAgents);
     if (readyAgents.size < minimumAgents || (requireRelevantFirst && !firstIsRelevant)) failed = true;
     const reasons = [...new Set(relevantResults.filter((item) => !item.canStartThread).map((item) => item.threadUnavailableReason).filter(Boolean))];
-    console.log(`${name}: ${found.outcome}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${readyAgents.size}/${minimumAgents} executable agents${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
+    console.log(`${name}: ${found.outcome}${found.broadened ? ' (broadened provider discovery)' : ''}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${readyAgents.size}/${minimumAgents} executable agents${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
   } catch (error) {
     failed = true;
     console.error(`${name}: ${error.message} (${Math.round(performance.now() - started)} ms)`);
