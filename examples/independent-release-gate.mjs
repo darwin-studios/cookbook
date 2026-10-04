@@ -1,4 +1,4 @@
-import { chosenReady, discover, hasProviderResult, invokeCapability, isDistinctAgent, showOutcome, terminal } from '../lib/recipe.mjs';
+import { chosenReady, discover, hasProviderResult, invokeCapability, isAccessibilityAuditCandidate, isDistinctAgent, isSecurityHeadersCandidate, showOutcome, terminal } from '../lib/recipe.mjs';
 import { canRequestThread } from '../lib/darwin.mjs';
 
 // Product idea: a release workflow that sources independent specialist checks
@@ -13,12 +13,12 @@ try {
     process.exit(0);
   }
   const checks = [
-    { label: 'Accessibility', query: 'web accessibility WCAG audit tool', objective: 'Check WCAG accessibility' },
-    { label: 'Security', query: 'website security headers scanner', objective: 'Check website security headers' },
+    { label: 'Accessibility', query: 'MCP accessibility audit tool to check a web page for WCAG issues', objective: 'Run a live page accessibility check, not describe a consulting offering', select: isAccessibilityAuditCandidate },
+    { label: 'Security', query: 'website security headers scanner', objective: 'Check website security headers', select: isSecurityHeadersCandidate },
   ];
   const outcomes = [];
   for (const check of checks) {
-    const ranked = await discover(check.label, check.query, check.objective);
+    const ranked = await discover(check.label, check.query, check.objective, { select: check.select });
     if (!ranked.some(canRequestThread)) continue;
     const number = await io.ask(`Choose one READY or RECHECK ${check.label.toLowerCase()} capability (Enter to skip): `);
     if (!number) continue;

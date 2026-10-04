@@ -1,5 +1,5 @@
 import { choices, search } from '../lib/darwin.mjs';
-import { findCandidates, isShoppingResearchCandidate } from '../lib/recipe.mjs';
+import { findCandidates, isAccessibilityAuditCandidate, isSecurityHeadersCandidate, isShoppingResearchCandidate } from '../lib/recipe.mjs';
 
 const scenarios = [
   {
@@ -13,8 +13,7 @@ const scenarios = [
   {
     name: 'Browse quickstart accessibility', query: 'MCP accessibility audit tool to check a web page for WCAG issues', numResults: 5, minimumAgents: 1,
     requireRelevantFirst: true,
-    relevant: (item) => /accessibility|wcag/i.test(`${item.name} ${item.description}`)
-      && /audit|check|scan/i.test(`${item.name} ${item.description}`),
+    relevant: isAccessibilityAuditCandidate,
   },
   {
     name: 'Assistant diagnostic', query: 'MCP server health diagnostic whoami tool', numResults: 8,
@@ -32,14 +31,14 @@ const scenarios = [
     relevant: isShoppingResearchCandidate,
   },
   {
-    name: 'Accessibility review', query: 'web accessibility WCAG audit tool', minimumAgents: 1,
-    objective: 'Check WCAG accessibility',
-    relevant: (item) => /accessibility|wcag/i.test(`${item.name} ${item.description}`),
+    name: 'Accessibility review', query: 'MCP accessibility audit tool to check a web page for WCAG issues', minimumAgents: 1,
+    objective: 'Run a live page accessibility check, not describe a consulting offering',
+    relevant: isAccessibilityAuditCandidate,
   },
   {
     name: 'Security review', query: 'website security headers scanner', minimumAgents: 1,
     objective: 'Check website security headers',
-    relevant: (item) => /security|threat|vulnerabilit|security headers/i.test(`${item.name} ${item.description}`),
+    relevant: isSecurityHeadersCandidate,
   },
 ];
 let failed = false;

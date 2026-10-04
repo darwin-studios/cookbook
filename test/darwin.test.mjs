@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { canRequestThread, choices, search, startThread, sendThreadMessage, getThread, request, DarwinError } from '../lib/darwin.mjs';
-import { chosenReady, discover, hasProviderResult, isDistinctAgent, isShoppingResearchCandidate, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
+import { chosenReady, discover, hasProviderResult, isAccessibilityAuditCandidate, isDistinctAgent, isSecurityHeadersCandidate, isShoppingResearchCandidate, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
   const fetchImpl = async (_url, options) => {
@@ -28,6 +28,13 @@ test('Shopping recipe only offers product research candidates', () => {
   assert.equal(isShoppingResearchCandidate({ name: 'Merchant check', description: 'Is this online store safe to buy from?' }), false);
   assert.equal(isShoppingResearchCandidate({ name: 'Shopping guide', description: 'When-to-use shopping workflow' }), false);
   assert.equal(isShoppingResearchCandidate({ name: 'Checkout', description: 'Purchase a product from shopping results' }), false);
+});
+
+test('Release-gate discovery excludes sales offerings and keeps live audit tools', () => {
+  assert.equal(isAccessibilityAuditCandidate({ name: 'Get WCAG Accessibility Audit Offering', description: 'Returns scope and pricing bands for consulting.' }), false);
+  assert.equal(isAccessibilityAuditCandidate({ name: 'audit_site_accessibility', description: 'Scan a live URL for WCAG violations.' }), true);
+  assert.equal(isSecurityHeadersCandidate({ name: 'Get Security Audit Offering', description: 'Returns consulting pricing bands for HTTP security headers.' }), false);
+  assert.equal(isSecurityHeadersCandidate({ name: 'check_http_headers', description: 'Fetch a URL and grade HSTS and CSP security headers.' }), true);
 });
 
 test('Shopping discovery broadens provider search without changing the specific request', async () => {
