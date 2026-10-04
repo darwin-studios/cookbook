@@ -17,10 +17,13 @@ const scenarios = [
     relevant: isAccessibilityAuditCandidate,
   },
   {
-    name: 'Browse Search guide invoice extraction', query: 'OCR API for handwritten invoices that returns structured JSON',
+    name: 'Browse Search guide invoice extraction', query: 'invoice PDF or image extraction with line items and validated totals as structured JSON',
     numResults: 5, minimumAgents: 0, requireRelevantFirst: true,
     relevant: (item) => /invoice/i.test(`${item.name} ${item.description}`)
-      && /extract|pars|ocr|structured json/i.test(`${item.name} ${item.description}`),
+      && /pdf|image/i.test(`${item.name} ${item.description}`)
+      && /line items?/i.test(`${item.name} ${item.description}`)
+      && /validat|check.*total/i.test(`${item.name} ${item.description}`)
+      && /json/i.test(`${item.name} ${item.description}`),
   },
   {
     name: 'Assistant diagnostic', query: 'MCP server health diagnostic whoami tool', numResults: 8,
