@@ -38,6 +38,7 @@ test('Shopping recipe only offers product research candidates', () => {
 test('Release-gate discovery excludes sales offerings and keeps live audit tools', () => {
   assert.equal(isAccessibilityAuditCandidate({ name: 'Get WCAG Accessibility Audit Offering', description: 'Returns scope and pricing bands for consulting.' }), false);
   assert.equal(isAccessibilityAuditCandidate({ name: 'audit_site_accessibility', description: 'Scan a live URL for WCAG violations.' }), true);
+  assert.equal(isAccessibilityAuditCandidate({ name: 'Complete Brand Colour Audit', description: 'Check palette WCAG accessibility. For a live-site brand audit, inspect web pages first.' }), false);
   assert.equal(isSecurityHeadersCandidate({ name: 'Get Security Audit Offering', description: 'Returns consulting pricing bands for HTTP security headers.' }), false);
   assert.equal(isSecurityHeadersCandidate({ name: 'check_http_headers', description: 'Fetch a URL and grade HSTS and CSP security headers.' }), true);
 });
