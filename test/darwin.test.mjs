@@ -280,3 +280,29 @@ test('Thread reads stop on a failed action without claiming a provider answer', 
     assert.equal(reads, 1);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test('Thread reads stop on any pending review without confirming it', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLog = console.log;
+  let reads = 0;
+  console.log = () => {};
+  globalThis.fetch = async () => {
+    reads++;
+    return { ok: true, json: async () => ({
+      thread: 'thread-1', cursor: 'thread-1:2', hasMore: false, needsAttention: true, messages: [], actions: [],
+      requests: [
+        { request: 'review-1', type: 'action_request', status: 'pending' },
+        { request: 'review-2', type: 'completion_request', status: 'pending' },
+      ],
+    }) };
+  };
+  try {
+    const outcome = await readThread('thread-1', 'thread-1:1', { requireResult: true });
+    assert.equal(reads, 1);
+    assert.deepEqual(outcome.pending.map((request) => request.request), ['review-1', 'review-2']);
+    assert.equal(hasProviderResult(outcome.messages), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.log = originalLog;
+  }
+});
