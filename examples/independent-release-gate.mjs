@@ -1,4 +1,5 @@
 import { chosenReady, discover, hasProviderResult, invokeCapability, isDistinctAgent, showOutcome, terminal } from '../lib/recipe.mjs';
+import { canRequestThread } from '../lib/darwin.mjs';
 
 // Product idea: a release workflow that sources independent specialist checks
 // from the network rather than wiring one fixed audit vendor into CI.
@@ -18,8 +19,8 @@ try {
   const outcomes = [];
   for (const check of checks) {
     const ranked = await discover(check.label, check.query, check.objective);
-    if (!ranked.some((item) => item.canStartThread && item.readiness === 'ready')) continue;
-    const number = await io.ask(`Choose one READY ${check.label.toLowerCase()} capability (Enter to skip): `);
+    if (!ranked.some(canRequestThread)) continue;
+    const number = await io.ask(`Choose one READY or RECHECK ${check.label.toLowerCase()} capability (Enter to skip): `);
     if (!number) continue;
     const choice = chosenReady(ranked, number);
     if (!isDistinctAgent(outcomes, choice)) {

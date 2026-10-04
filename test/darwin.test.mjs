@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { choices, search, startThread, sendThreadMessage, getThread, request, DarwinError } from '../lib/darwin.mjs';
+import { canRequestThread, choices, search, startThread, sendThreadMessage, getThread, request, DarwinError } from '../lib/darwin.mjs';
 import { chosenReady, discover, hasProviderResult, isDistinctAgent, isShoppingResearchCandidate, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
@@ -55,8 +55,39 @@ test('Shopping discovery broadens provider search without changing the specific 
   }
 });
 
+test('A first-use recheck candidate is offered without calling it ready or broadening discovery', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLog = console.log;
+  const queries = [];
+  const lines = [];
+  console.log = (...values) => lines.push(values.join(' '));
+  globalThis.fetch = async (_url, options) => {
+    queries.push(JSON.parse(options.body).query);
+    return { ok: true, json: async () => ({
+      outcome: 'MATCH', agents: [{ agent: 'agent-1', name: 'Provider' }],
+      results: [{ agent: 'agent-1', capability: 'cap-1', name: 'product-search',
+        readiness: 'recheck_available', canStartThread: false, canAttemptThread: true,
+        threadUnavailableReason: 'ROUTE_NOT_APPROVED' }],
+    }) };
+  };
+  try {
+    const ranked = await discover('Shopping', 'specific product', 'Find a shopping search agent', {
+      fallbackQuery: 'product search', select: isShoppingResearchCandidate,
+    });
+    assert.deepEqual(queries, ['specific product']);
+    assert.equal(ranked.length, 1);
+    assert.match(lines.join('\n'), /RECHECK BEFORE EXECUTION/);
+    assert.doesNotMatch(lines.join('\n'), /No ready or first-use-recheckable match/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.log = originalLog;
+  }
+});
+
 test('Act fails closed for a non-executable Search result', async () => {
-  await assert.rejects(startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'unavailable', canStartThread: false }), /not currently executable/);
+  await assert.rejects(startThread({ agent: 'agent-1', capability: 'cap-2', readiness: 'unavailable', canStartThread: false }), /neither ready nor eligible/);
+  assert.equal(canRequestThread({ readiness: 'unavailable', canStartThread: false, canAttemptThread: false }), false);
+  assert.equal(canRequestThread({ readiness: 'unavailable', canStartThread: false, canAttemptThread: true }), false);
 });
 
 test('Search rejects invalid result counts', async () => {
@@ -96,12 +127,36 @@ test('Public MCP tool-selection conflict preserves exact choices and does not re
 });
 
 test('Recipes cannot select an unavailable capability', () => {
-  assert.throws(() => chosenReady([{ agent: 'merchant', readiness: 'unavailable', canStartThread: false }], '1'), /not executable/);
+  assert.throws(() => chosenReady([{ agent: 'merchant', readiness: 'unavailable', canStartThread: false }], '1'), /not eligible/);
 });
 
 test('An unexecutable Search match fails an Act demo instead of reporting success', () => {
   assert.throws(() => requireReady([{ agent: 'merchant', readiness: 'unavailable', canStartThread: false }], 'shopping'), /live Act demo cannot run/);
   assert.doesNotThrow(() => requireReady([{ agent: 'merchant', readiness: 'ready', canStartThread: true }], 'shopping'));
+  assert.doesNotThrow(() => requireReady([{ agent: 'merchant', readiness: 'recheck_available', canStartThread: false, canAttemptThread: true }], 'shopping'));
+});
+
+test('A Search first-use candidate can request recheck, but it is not called ready', async () => {
+  const previous = process.env.DARWIN_ACCESS_TOKEN;
+  process.env.DARWIN_ACCESS_TOKEN = 'test-only-token';
+  const choice = { agent: 'agent-1', capability: 'cap-2', readiness: 'recheck_available', canStartThread: false, canAttemptThread: true };
+  try {
+    let calls = 0;
+    const result = await startThread(choice, {
+      messageType: 'action_request', messageContent: {}, idempotencyKey: 'recheck-1',
+      fetchImpl: async (_url, options) => {
+        calls++;
+        assert.equal(JSON.parse(options.body).messageContent.capability, 'cap-2');
+        return { ok: true, json: async () => ({ thread: 'thread-1', message: 'message-1', status: 'accepted', cursor: 'thread-1:1', idempotencyKey: 'recheck-1' }) };
+      },
+    });
+    assert.equal(calls, 1);
+    assert.equal(result.status, 'accepted');
+    assert.equal(choice.readiness, 'recheck_available');
+  } finally {
+    if (previous === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
+    else process.env.DARWIN_ACCESS_TOKEN = previous;
+  }
 });
 
 test('Independent checks cannot count two tools from the same agent as separate reviews', () => {

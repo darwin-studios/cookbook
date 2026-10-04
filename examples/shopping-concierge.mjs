@@ -16,7 +16,7 @@ try {
     category: 'shopping', select: isShoppingResearchCandidate, fallbackQuery: 'product search',
   });
   requireReady(ranked, 'shopping');
-  const raw = await io.ask('Choose up to two READY product-search or quote capabilities (comma-separated): ');
+  const raw = await io.ask('Choose up to two READY or RECHECK product-search or quote capabilities (comma-separated): ');
   const numbers = [...new Set(raw.split(',').map((value) => value.trim()).filter(Boolean))].slice(0, 2);
   if (!numbers.length) process.exit(0);
   const selected = numbers.map((number) => chosenReady(ranked, number));

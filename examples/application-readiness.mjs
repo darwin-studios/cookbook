@@ -15,7 +15,7 @@ try {
     { select: (item) => item.agentName.toLowerCase().includes(employer.toLowerCase()) && /list current job openings/i.test(item.name || '') },
   );
   requireReady(ranked, 'the hiring agent');
-  const number = await io.ask('Choose the READY listing capability (Enter to stop): ');
+  const number = await io.ask('Choose a READY or RECHECK listing capability (Enter to stop): ');
   if (!number) process.exit(0);
   const choice = chosenReady(ranked, number);
   if (!/list current job openings/i.test(choice.name)) {

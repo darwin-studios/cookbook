@@ -55,10 +55,11 @@ for (const { name, query, category, objective, fallbackQuery, numResults = 10, m
     const relevantResults = ranked.filter(relevant);
     const firstIsRelevant = Boolean(ranked[0] && relevant(ranked[0]));
     const readyAgents = new Set(relevantResults.filter((item) => item.canStartThread && item.readiness === 'ready').map((item) => item.agent));
+    const recheckAgents = new Set(relevantResults.filter((item) => item.canAttemptThread && item.readiness === 'recheck_available').map((item) => item.agent));
     readyByScenario.set(name, readyAgents);
     if (readyAgents.size < minimumAgents || (requireRelevantFirst && !firstIsRelevant)) failed = true;
     const reasons = [...new Set(relevantResults.filter((item) => !item.canStartThread).map((item) => item.threadUnavailableReason).filter(Boolean))];
-    console.log(`${name}: ${found.outcome}${found.broadened ? ' (broadened provider discovery)' : ''}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${readyAgents.size}/${minimumAgents} executable agents${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
+    console.log(`${name}: ${found.outcome}${found.broadened ? ' (broadened provider discovery)' : ''}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${readyAgents.size}/${minimumAgents} executable agents, ${recheckAgents.size} first-use rechecks (not yet proven)${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
   } catch (error) {
     failed = true;
     console.error(`${name}: ${error.message} (${Math.round(performance.now() - started)} ms)`);
