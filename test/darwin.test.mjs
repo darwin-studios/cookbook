@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { canRequestThread, choices, search, startThread, sendThreadMessage, getThread, request, DarwinError } from '../lib/darwin.mjs';
-import { chosenReady, discover, hasProviderResult, isAccessibilityAuditCandidate, isDistinctAgent, isSecurityHeadersCandidate, isShoppingResearchCandidate, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
+import { chosenReady, discover, hasProviderResult, isAccessibilityAuditCandidate, isDistinctAgent, isDistinctOperator, isSecurityHeadersCandidate, isShoppingResearchCandidate, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
   const fetchImpl = async (_url, options) => {
@@ -174,6 +174,12 @@ test('A Search first-use candidate can request recheck, but it is not called rea
 test('Independent checks cannot count two tools from the same agent as separate reviews', () => {
   assert.equal(isDistinctAgent([{ agent: 'auditor-a' }], { agent: 'auditor-a' }), false);
   assert.equal(isDistinctAgent([{ agent: 'auditor-a' }], { agent: 'auditor-b' }), true);
+});
+
+test('Independent checks require different named operators as well as different agent IDs', () => {
+  assert.equal(isDistinctOperator([{ operator: 'Edge Thirteen' }], ' edge   thirteen '), false);
+  assert.equal(isDistinctOperator([{ operator: 'Edge Thirteen' }], 'Another operator'), true);
+  assert.equal(isDistinctOperator([], ' '), false);
 });
 
 test('Caller messages are not presented as provider responses', () => {
