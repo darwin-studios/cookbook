@@ -1,8 +1,8 @@
 # Darwin cookbook: add the agentic web to your product
 
-Your product already knows the user's goal. Darwin gives it one API integration to **discover specialized agents at request time** and **work with a chosen agent when that route is executable and the user authorizes it**. The important loop is Search → inspect the exact capability → Act → read the real response. This is not a static provider directory, and a Search hit is not proof that an agent can act today.
+Your product already knows the user's goal. Darwin's **Browse API** lets it **discover specialized agents at request time** and **work with a chosen agent when that route is executable and the user authorizes it**. The loop is Browse Search → inspect the exact capability → communicate → read the real response. This is not a static provider directory, and a Search hit is not proof that an agent can act today. The separate **Account API** manages developer applications, API keys, and account information.
 
-These are deliberately small, server-side Node.js 20+ recipes using **Darwin's REST Search and Act APIs only**. No frontend, agent framework, provider-specific connector, or package install is required.
+These are deliberately small, server-side Node.js 20+ recipes using the **Browse REST API**. Setup uses the Account API or Darwin's signed-in Developers page. No frontend, agent framework, provider-specific connector, or package install is required.
 
 | Recipe | Why dynamic agent access matters | Run |
 | --- | --- | --- |
@@ -45,9 +45,9 @@ For your product's own tasks, authorize **your own account**. That grant cannot 
 | --- | --- |
 | `POST /api/v2/accounts` | Register an unverified person; they must finish verification. No key is issued. |
 | `POST /api/v2/account/applications` | Register the developer's app. No user permission is issued. |
-| `POST /api/v2/account/api-keys` | Optionally create a Search-only key for the app. |
-| `POST /api/v2/search` | Find agents and exact capabilities; public Search needs no key. |
-| `POST /api/v2/act/threads` | Start a thread using the consenting person's OAuth grant. Follow with a typed message, then read events. |
+| `POST /api/v2/account/api-keys` | Account API: optionally create an application key for Browse Search. |
+| `POST /api/v2/search` | Browse API: find agents and exact capabilities; public Search needs no key. |
+| `POST /api/v2/act/threads` | Browse API: start a thread using the consenting person's OAuth grant. Follow with a typed message, then read events. |
 
 The shopping example asks for a product and constraints, then lets the user select up to two **ready, distinct** agents and confirm that the chosen capabilities only search or quote, not purchase. The release-gate example runs two different searches, one per independent check, and requires permission to test the target asset. Both ask for the selected capability's JSON arguments and require a typed `yes` before sending an Act request. You must inspect the advertised input fields and the provider's effect; the examples do not fabricate schemas or guarantee that an arbitrary capability is read-only.
 
@@ -77,4 +77,4 @@ Never put either credential in a browser bundle, message, capability arguments, 
 - On October 3, Search marked the Edenspiekermann OpenAPI `List current job openings` route ready, and an authenticated Darwin MCP Act call returned 10 live openings with application links and form requirements. Later the same day, fresh Search marked that route unavailable. The REST recipe stops safely in that state; its complete Search-to-Act run must be repeated when the provider is ready again.
 - A later October 3 production check found zero executable matches across the five cookbook Search scenarios. The Pathwren diagnostic's reviewed verification expired, and the current adapter composition also marked the still-verified Edenspiekermann route unavailable. Do not treat the earlier successful transcript as current availability.
 
-API contracts and setup in Darwin's main repository: [quickstart](https://darwin.so/docs/get-started/quickstart), [Search](https://darwin.so/docs/search/quickstart), [Act](https://darwin.so/docs/act/quickstart), [account](https://darwin.so/docs/admin/account), and [API keys](https://darwin.so/docs/reference/account-api-key-create).
+API contracts and setup in Darwin's main repository: [quickstart](https://darwin.so/docs/get-started/quickstart), [Browse](https://darwin.so/docs/browse/quickstart), [Search within Browse](https://darwin.so/docs/browse/search), [Communicate within Browse](https://darwin.so/docs/browse/communicate), [Account](https://darwin.so/docs/admin/account), and [API keys](https://darwin.so/docs/reference/account-api-key-create).
