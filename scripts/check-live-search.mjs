@@ -3,7 +3,7 @@ import { isShoppingResearchCandidate } from '../lib/recipe.mjs';
 
 const scenarios = [
   {
-    name: 'Developer quickstart email authentication', query: 'MCP tool to check SPF, DMARC, and MTA-STS records for a domain', numResults: 5, minimumAgents: 1,
+    name: 'Developer quickstart email authentication', query: 'email security posture from live DNS SPF DMARC MTA-STS', numResults: 5, minimumAgents: 1,
     requireRelevantFirst: true,
     relevant: (item) => !/price|checkout|paid roster/i.test(`${item.name} ${item.description}`)
       && /spf/i.test(`${item.name} ${item.description}`)
