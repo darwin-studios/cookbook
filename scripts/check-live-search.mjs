@@ -32,12 +32,12 @@ const scenarios = [
     relevant: isShoppingResearchCandidate,
   },
   {
-    name: 'Accessibility review', query: 'WCAG accessibility audit website', minimumAgents: 1,
+    name: 'Accessibility review', query: 'web accessibility WCAG audit tool', minimumAgents: 1,
     objective: 'Check WCAG accessibility',
     relevant: (item) => /accessibility|wcag/i.test(`${item.name} ${item.description}`),
   },
   {
-    name: 'Security review', query: 'security audit of website URL', minimumAgents: 1,
+    name: 'Security review', query: 'website security headers scanner', minimumAgents: 1,
     objective: 'Check website security headers',
     relevant: (item) => /security|threat|vulnerabilit|security headers/i.test(`${item.name} ${item.description}`),
   },

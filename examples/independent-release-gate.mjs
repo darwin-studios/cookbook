@@ -12,8 +12,8 @@ try {
     process.exit(0);
   }
   const checks = [
-    { label: 'Accessibility', query: 'WCAG accessibility audit website', objective: 'Check WCAG accessibility' },
-    { label: 'Security', query: 'security audit of website URL', objective: 'Check website security headers' },
+    { label: 'Accessibility', query: 'web accessibility WCAG audit tool', objective: 'Check WCAG accessibility' },
+    { label: 'Security', query: 'website security headers scanner', objective: 'Check website security headers' },
   ];
   const outcomes = [];
   for (const check of checks) {
