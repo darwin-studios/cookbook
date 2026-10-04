@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { describeJob, jobsFromOutcome } from '../lib/jobs.mjs';
 
 test('extracts only actual structured provider results', () => {
-  assert.deepEqual(jobsFromOutcome({ events: [{ sender: 'runtime', payload: { type: 'message', parts: [{ type: 'text', text: 'queued' }] } }] }), []);
+  assert.deepEqual(jobsFromOutcome({ messages: [{ from: 'darwin', type: 'message', content: [{ type: 'text', text: 'queued' }] }] }), []);
   const job = { name: 'Designer' };
-  assert.deepEqual(jobsFromOutcome({ events: [{ sender: 'runtime', payload: { type: 'result', data: { data: [job] } } }] }), [job]);
+  assert.deepEqual(jobsFromOutcome({ messages: [{ from: 'darwin', type: 'result', data: { data: [job] } }] }), [job]);
 });
 
 test('summarizes application requirements without applicant information', () => {

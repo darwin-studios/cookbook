@@ -31,7 +31,7 @@ try {
   }
   console.log('\nProduct results — only actual external responses appear below.');
   for (const { choice, outcome } of outcomes) showOutcome(choice.agentName, outcome);
-  if (outcomes.some(({ outcome }) => !outcome || outcome.errors?.length || !hasProviderResult(outcome.events))) {
+  if (outcomes.some(({ outcome }) => !outcome || outcome.errors?.length || !hasProviderResult(outcome.messages))) {
     throw new Error('At least one selected shopping agent has not returned an external response. Do not treat this comparison as complete.');
   }
   console.log('This starter does not call Pay or auto-confirm checkout. Review any later payment request separately.');
