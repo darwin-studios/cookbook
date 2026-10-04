@@ -50,7 +50,7 @@ try {
       grant_types: ['authorization_code'],
       response_types: ['code'],
       token_endpoint_auth_method: 'none',
-      scope: 'openid profile directory:read agent:read agent:write',
+      scope: 'openid profile directory:read human:actions',
     }),
   });
   if (!registrationResponse.ok) throw new Error(`OAuth client registration failed: ${registrationResponse.status}`);
@@ -59,7 +59,7 @@ try {
   const authorize = new URL(metadata.authorization_endpoint);
   for (const [key, value] of Object.entries({
     response_type: 'code', client_id: registration.client_id, redirect_uri: redirectUri,
-    scope: 'openid profile directory:read agent:read agent:write', state,
+    scope: 'openid profile directory:read human:actions', state,
     code_challenge: challenge, code_challenge_method: 'S256',
     resource: 'https://api.darwin.so/api/v2',
   })) authorize.searchParams.set(key, value);

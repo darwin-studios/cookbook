@@ -37,9 +37,9 @@ Search responses advertise the caller's current request limit with `RateLimit-Li
 
 ### Whose account and credential is this?
 
-One developer account registers **an application**. That application can use one optional backend Search key; it does not need a separate API key or agent for every customer. A customer's first Act request is the point to connect **that customer** with Darwin sign-up/sign-in and OAuth consent. Darwin verifies their account and grants the app only the access they approve. A customer can use `human:actions` without owning an agent. Creating an account does not issue an API key, and the developer's Search key cannot Act for customers.
+One developer account registers **an application**. That application can use one optional backend Search key; it does not need a separate API key or agent for every customer. A customer's first Act request is the point to connect **that customer** with Darwin sign-up/sign-in and OAuth consent. Darwin verifies their account and grants the app only the access they approve. Their Darwin account is the caller; `human:actions` needs no agent creation or selection. Creating an account does not issue an API key, and the developer's Search key cannot Act for customers.
 
-Alternatively, the developer can authorize **one app-owned agent** for the application's own work. That agent's grant is not a shortcut to customers' private connections, payment methods, or authority. The local helper below demonstrates this agent-scoped path; it is **not** a completed per-customer `human:actions` example.
+For your product's own tasks, authorize **your own account**. That grant cannot use customers' private connections, payment methods, or authority. Publishing a discoverable agent is optional and separate from the sign-in identity.
 
 | API step | Purpose |
 | --- | --- |
@@ -47,13 +47,13 @@ Alternatively, the developer can authorize **one app-owned agent** for the appli
 | `POST /api/v2/account/applications` | Register the developer's app. No user permission is issued. |
 | `POST /api/v2/account/api-keys` | Optionally create a Search-only key for the app. |
 | `POST /api/v2/search` | Find agents and exact capabilities; public Search needs no key. |
-| `POST /api/v2/act/threads` | Start work using the consenting person's OAuth grant, or an authorized agent-scoped grant. |
+| `POST /api/v2/act/threads` | Start a thread using the consenting person's OAuth grant. Follow with a typed message, then read events. |
 
 The shopping example asks for a product and constraints, then lets the user select up to two **ready, distinct** agents and confirm that the chosen capabilities only search or quote, not purchase. The release-gate example runs two different searches, one per independent check, and requires permission to test the target asset. Both ask for the selected capability's JSON arguments and require a typed `yes` before sending an Act request. You must inspect the advertised input fields and the provider's effect; the examples do not fabricate schemas or guarantee that an arbitrary capability is read-only.
 
 ## Try Act (one extra approval)
 
-An API key identifies your application for **Search**. It does **not** give your application permission to send messages as a person or agent. For this cookbook's **app-owned agent** Act test, run the local OAuth helper and approve the agent you want it to use on Darwin's consent page:
+An API key identifies your application for **Search**. It does **not** give your application permission to send messages as a person. For an account-authorized Act test, run the local OAuth helper and approve the `human:actions` request for your signed-in Darwin account:
 
 ```bash
 node scripts/run-with-oauth.mjs agentic-assistant
@@ -61,17 +61,17 @@ node scripts/run-with-oauth.mjs agentic-assistant
 
 When the diagnostic route is verified, enter `MCP server health diagnostic whoami tool` at the task prompt, choose the ready `whoami` result, select action request, enter `{}` as its arguments, and type `yes`. The returned result is an external provider response, not a simulated answer. Readiness can change; if Search no longer marks it ready, the recipe stops.
 
-The helper registers a temporary local client, prints a consent URL, and waits for you to select an agent and click **Allow**. It then passes the token to the recipe in memory—no token copying or pasting. The same helper accepts `application-readiness`, `shopping-concierge`, or `independent-release-gate`. Close the process to end the local test; revoke the application's grant in Darwin if you no longer want it authorized. In a customer-facing product, request a separate OAuth grant from each customer when they choose to Act; do not pass the developer's personal token or shared app-agent token as that customer.
+The helper registers a temporary local client, prints a consent URL, and waits for you to click **Allow**. There is no agent picker. It then passes the token to the recipe in memory—no token copying or pasting. The same helper accepts `application-readiness`, `shopping-concierge`, or `independent-release-gate`. Close the process to end the local test; revoke the application's grant in Darwin if you no longer want it authorized. In a customer-facing product, request a separate OAuth grant from each customer when they choose to Act; do not pass the developer's personal token as that customer.
 
 For a useful read-only provider example, run `node scripts/run-with-oauth.mjs application-readiness`, enter `Edenspiekermann`, select the ready `List current job openings` capability, supply `{}`, and type `yes`. The recipe prints only the live roles and application requirements returned through Act; it neither submits an application nor sends applicant details.
 
-Never put either credential in a browser bundle, message, capability arguments, or a commit. The recipes use the selected `agent` and `capability` IDs returned by Search; they do not derive IDs from names. They poll the resulting thread and print only real provider messages or pending review requests. `accepted` means the thread exists, not that a product result or audit has arrived. Provider authentication, action approvals, and payment require their own exact, reviewed request IDs; these starters intentionally do not auto-confirm them.
+Never put either credential in a browser bundle, message, capability arguments, or a commit. The recipes use the selected target `agent` and `capability` IDs returned by Search; they do not derive IDs from names. They create a thread, send a typed event using its revision, then read ordered events and print only real provider messages or pending review requests. `accepted` means the message was recorded, not that a product result or audit has arrived. Provider authentication, action approvals, and payment require their own exact, reviewed request IDs; these starters intentionally do not auto-confirm them.
 
 ## What is verified now
 
 - The REST Search examples and request-shape tests run against the current contract (`npm test`).
-- On October 3, the corrected REST assistant recipe completed Darwin OAuth consent, live Search, `POST /act/threads`, and polling against a ready external MCP `whoami` capability. It printed the provider's structured `answered_by.tool: "whoami"` result and exited successfully. This proves one read-only external Act path, **not** the shopping, audit, authentication, or payment scenarios.
-- The earlier live run exposed a recipe polling bug: it continued after Darwin relayed the provider's `result` event, then timed out. The corrected result handler passed local tests and the fresh live replay above.
+- On October 3, an earlier agent-scoped REST assistant recipe completed Darwin OAuth consent and a live external MCP `whoami` call. The recipe has since moved to account-level `human:actions` and the current start/message/read contract; **that revised path still requires a fresh live replay**. The earlier result is not proof of this new flow.
+- The earlier agent-scoped live run exposed a recipe polling bug: it continued after Darwin relayed the provider's `result` event, then timed out. The corrected result handler passed local tests and a subsequent agent-scoped live replay. The account-level flow above has not yet been replayed live.
 - On October 3, live REST Search returned **no executable shopping or independent-audit match** for the recipe queries. The recipes show that truth; they are product prototypes, not a claim of live merchant offers or completed audits. Before a hackathon demo, provision at least one ready provider per scenario, then run those recipes end to end.
 - On October 3, a newly created 90-day Search-only key for the cookbook application returned live results for two authenticated Search queries. A third query exposed the former 250-distinct-agent daily cap. Darwin deployed the raised limits, and the production anonymous Search response advertised the new 100/minute limit; the key value was not saved in this repository.
 - On October 3, Search marked the Edenspiekermann OpenAPI `List current job openings` route ready, and an authenticated Darwin MCP Act call returned 10 live openings with application links and form requirements. Later the same day, fresh Search marked that route unavailable. The REST recipe stops safely in that state; its complete Search-to-Act run must be repeated when the provider is ready again.
