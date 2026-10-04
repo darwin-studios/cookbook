@@ -4,13 +4,17 @@ import { isShoppingResearchCandidate } from '../lib/recipe.mjs';
 const scenarios = [
   {
     name: 'Developer quickstart email authentication', query: 'MCP tool to check SPF, DMARC, and MTA-STS records for a domain', numResults: 5, minimumAgents: 1,
-    relevant: (item) => /spf/i.test(`${item.name} ${item.description}`)
+    requireRelevantFirst: true,
+    relevant: (item) => !/price|checkout|paid roster/i.test(`${item.name} ${item.description}`)
+      && /spf/i.test(`${item.name} ${item.description}`)
       && /dmarc/i.test(`${item.name} ${item.description}`)
       && /mta.sts/i.test(`${item.name} ${item.description}`),
   },
   {
     name: 'Browse quickstart accessibility', query: 'MCP accessibility audit tool to check a web page for WCAG issues', numResults: 5, minimumAgents: 1,
-    relevant: (item) => /accessibility|wcag/i.test(`${item.name} ${item.description}`),
+    requireRelevantFirst: true,
+    relevant: (item) => /accessibility|wcag/i.test(`${item.name} ${item.description}`)
+      && /audit|check|scan/i.test(`${item.name} ${item.description}`),
   },
   {
     name: 'Assistant diagnostic', query: 'MCP server health diagnostic whoami tool', numResults: 8,
@@ -40,18 +44,19 @@ const scenarios = [
 ];
 let failed = false;
 const readyByScenario = new Map();
-for (const { name, query, category, objective, numResults = 10, minimumAgents, relevant } of scenarios) {
+for (const { name, query, category, objective, numResults = 10, minimumAgents, requireRelevantFirst = false, relevant } of scenarios) {
   const started = performance.now();
   try {
     const found = await search(query, { category, objective, numResults });
     const ranked = choices(found);
     if (!Array.isArray(found.agents) || !Array.isArray(found.results)) throw new Error('Invalid Search response shape');
     const relevantResults = ranked.filter(relevant);
+    const firstIsRelevant = Boolean(ranked[0] && relevant(ranked[0]));
     const readyAgents = new Set(relevantResults.filter((item) => item.canStartThread && item.readiness === 'ready').map((item) => item.agent));
     readyByScenario.set(name, readyAgents);
-    if (readyAgents.size < minimumAgents) failed = true;
+    if (readyAgents.size < minimumAgents || (requireRelevantFirst && !firstIsRelevant)) failed = true;
     const reasons = [...new Set(relevantResults.filter((item) => !item.canStartThread).map((item) => item.threadUnavailableReason).filter(Boolean))];
-    console.log(`${name}: ${found.outcome}, ${ranked.length} ranked, ${relevantResults.length} relevant, ${readyAgents.size}/${minimumAgents} executable agents${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
+    console.log(`${name}: ${found.outcome}, ${ranked.length} ranked, ${relevantResults.length} relevant${requireRelevantFirst ? `, first result ${firstIsRelevant ? 'relevant' : 'NOT relevant'}` : ''}, ${readyAgents.size}/${minimumAgents} executable agents${reasons.length ? ` (${reasons.join(', ')})` : ''}, ${Math.round(performance.now() - started)} ms`);
   } catch (error) {
     failed = true;
     console.error(`${name}: ${error.message} (${Math.round(performance.now() - started)} ms)`);
@@ -64,6 +69,6 @@ if (accessibility.size && security.size && new Set([...accessibility, ...securit
   console.error('The release-gate checks need two distinct executable agents.');
 }
 if (failed) {
-  console.error('At least one cookbook recipe lacks the executable agents it needs. Act demos are not ready.');
+  console.error('At least one cookbook or Quickstart scenario lacks relevant top results or the executable agents it needs. Act demos are not ready.');
   process.exitCode = 1;
 }
