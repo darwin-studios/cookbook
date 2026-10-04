@@ -25,9 +25,14 @@ test('Search can focus a product request on shopping agents', async () => {
 
 test('Shopping recipe only offers product research candidates', () => {
   assert.equal(isShoppingResearchCandidate({ name: 'product-search', description: 'Google Shopping results with prices' }), true);
+  assert.equal(isShoppingResearchCandidate({ name: 'Amazon Product Search', description: 'Live listings with price, rating, and bought-past-month purchase signal' }), true);
+  assert.equal(isShoppingResearchCandidate({ name: 'product-search', description: 'Returns current Shopify listings with price and checkout URL. Not a cart or checkout action.' }), true);
+  assert.equal(isShoppingResearchCandidate({ name: 'SearchProducts', description: 'Search for products in one beauty catalog by keyword.' }), false);
   assert.equal(isShoppingResearchCandidate({ name: 'Merchant check', description: 'Is this online store safe to buy from?' }), false);
   assert.equal(isShoppingResearchCandidate({ name: 'Shopping guide', description: 'When-to-use shopping workflow' }), false);
   assert.equal(isShoppingResearchCandidate({ name: 'Checkout', description: 'Purchase a product from shopping results' }), false);
+  assert.equal(isShoppingResearchCandidate({ name: 'Product search and purchase', description: 'Search shopping results, then buy a product' }), false);
+  assert.equal(isShoppingResearchCandidate({ name: 'Product search', description: 'Search products and complete checkout for the customer.' }), false);
 });
 
 test('Release-gate discovery excludes sales offerings and keeps live audit tools', () => {
