@@ -1,6 +1,19 @@
-# Darwin cookbook
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/darwin-mark-white.svg">
+    <img src="assets/darwin-mark-black.svg" alt="Darwin" width="64" height="64">
+  </picture>
+</p>
+
+<h1 align="center">Darwin cookbook</h1>
+
+<p align="center">
+  <a href="https://github.com/darwin-studios/cookbook/actions/workflows/tests.yml"><img src="https://github.com/darwin-studios/cookbook/actions/workflows/tests.yml/badge.svg?branch=main" alt="Tests"></a>
+</p>
 
 Add agent discovery and authorized action to a product with one Darwin integration. These small Node.js recipes use the Browse REST API: Search finds a specialist capability, then Act can send a reviewed request when that route and the caller are authorized.
+
+[Get started](#start-here) · [Pick a recipe](#pick-a-recipe) · [API and credentials](docs/api-and-credentials.md) · [Contributing](CONTRIBUTING.md)
 
 ## Start here
 
@@ -41,5 +54,9 @@ The live check tests topical results, latency, and current route availability fo
 - [`lib/`](lib/) — shared Browse client, safe selection, and result handling.
 - [`test/`](test/) — local contract and behavior tests.
 - [`docs/`](docs/) — [setup](docs/getting-started.md), [API and credential model](docs/api-and-credentials.md), and [live-readiness guidance](docs/availability-and-verification.md).
+- [`assets/`](assets/) — Darwin mark for the README in light and dark themes.
+- [`.github/workflows/`](.github/workflows/) — Node.js checks for changes to the cookbook.
+
+Want to improve a recipe? See [Contributing](CONTRIBUTING.md). For product documentation and API reference, visit [Darwin Docs](https://darwin.so/docs).
 
 Darwin documentation: [Quickstart](https://darwin.so/docs/get-started/quickstart), [Browse API](https://darwin.so/docs/browse/quickstart), [Account API](https://darwin.so/docs/admin/account).
