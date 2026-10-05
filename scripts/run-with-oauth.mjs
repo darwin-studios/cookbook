@@ -1,16 +1,25 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchOAuthJson } from '../lib/oauth.mjs';
 
 const recipe = process.argv[2];
 const cookbookRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-if (!recipe || !['agentic-assistant', 'ide-companion', 'shopping-concierge'].includes(recipe)) {
-  console.error('Usage: node scripts/run-with-oauth.mjs <agentic-assistant|ide-companion|shopping-concierge>');
+const modern = {
+  'general-assistant': 'general-assistant',
+  shopping: 'shopping',
+  ide: 'general-assistant',
+};
+if (!recipe || ![...Object.keys(modern), 'agentic-assistant', 'ide-companion', 'shopping-concierge'].includes(recipe)) {
+  console.error('Usage: node scripts/run-with-oauth.mjs <general-assistant|shopping|ide>');
   process.exit(2);
 }
+const modernFolder = modern[recipe];
+const tsx = modernFolder && resolve(dirname(fileURLToPath(import.meta.url)), '..', 'examples', 'typescript', modernFolder, 'node_modules', '.bin', 'tsx');
+if (tsx && !existsSync(tsx)) throw new Error(`Install the TypeScript example first: cd examples/typescript/${modernFolder} && npm install`);
 const issuer = 'https://darwin.so/api/customer/auth';
 const metadata = await fetchOAuthJson(`${issuer}/.well-known/openid-configuration`, { label: 'OAuth discovery' });
 const verifier = randomBytes(32).toString('base64url');
@@ -75,10 +84,18 @@ try {
   });
   if (!token.access_token) throw new Error('OAuth token response omitted access_token');
   console.log('OAuth succeeded. Running the recipe; the token stays in this process and its child.');
-  const child = spawn(process.execPath, [resolve(cookbookRoot, 'examples', `${recipe}.mjs`), ...(recipe === 'ide-companion' ? ['--act'] : [])], {
-    cwd: cookbookRoot, stdio: 'inherit', env: { ...process.env, DARWIN_ACCESS_TOKEN: token.access_token },
+  const command = tsx || process.execPath;
+  const args = tsx
+    ? [resolve(cookbookRoot, 'examples', 'typescript', modernFolder, 'index.ts')]
+    : [resolve(cookbookRoot, 'examples', `${recipe}.mjs`), ...(recipe === 'ide-companion' ? ['--act'] : [])];
+  const child = spawn(command, args, {
+    cwd: cookbookRoot, stdio: 'inherit', env: { ...process.env, DARWIN_ACCESS_TOKEN: token.access_token,
+      ...(recipe === 'ide' ? { DARWIN_INITIAL_TASK: process.env.DARWIN_IDE_TASK || '' } : {}) },
   });
-  const exitCode = await new Promise((resolve) => child.on('exit', (code) => resolve(code ?? 1)));
+  const exitCode = await new Promise((resolve, reject) => {
+    child.on('error', reject);
+    child.on('exit', (code) => resolve(code ?? 1));
+  });
   process.exitCode = exitCode;
 } finally {
   server.close();

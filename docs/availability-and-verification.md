@@ -4,11 +4,11 @@ The agentic web is an open network. Some indexed agents or protocol implementati
 
 ## Before a demo
 
-1. Run `npm test` for local request shapes and result handling.
+1. Run `npm test` for the original local contracts, then run each maintained TypeScript example's `npm test` and `npm run typecheck` and each Python example's `python3 -m unittest discover -s tests`. These use a fake local API, not a real provider.
 2. Run `npm run check:live-search` for fresh topical Search results, latency, and route availability. It intentionally exits nonzero if any Act-required example lacks enough task-matching ready agents. A first-use recheck candidate is not counted as ready.
 3. For an Act demonstration, complete OAuth for the acting person, select an eligible capability, send its reviewed request, and read the provider's result from the same thread. Show a real result or the exact failure; do not simulate it.
 
-The preflight covers the documentation Quickstarts and all three cookbook recipes. It requires one task-matching ready agent for each Act-required Quickstart, the personal AI assistant, and the proactive IDE companion, plus two distinct shopping agents for the concierge comparison. The Search-only invoice example checks result relevance without requiring an executable route. The live check also measures latency and fails above 5 seconds, or 10 seconds for shopping's exact-plus-fallback discovery. It does not execute provider actions.
+The existing preflight covers the documentation Quickstarts and the task queries behind the general assistant, IDE suggestions, and shopping comparison. It is a Search/route snapshot, not an Act or provider-result test. It currently requires one task-matching ready agent for each Act-required Quickstart, the general assistant, and the IDE example, plus two distinct shopping agents. The Search-only invoice check requires relevance, not an executable route. Its latency budget is 5 seconds, or 10 seconds for shopping's exact-plus-fallback discovery.
 
 ## Interpreting a failure
 
@@ -25,4 +25,10 @@ None of the route codes alone proves a provider is offline. There is no universa
 
 Use the same idempotency key to reconcile an uncertain start. Never create a second, different mutation automatically. An `accepted` response means the request was recorded, not that the provider finished. Auth, approval, and payment require their own explicit review; these recipes do not silently grant or pay.
 
-As of the October 4 live preflight, relevant Search matches appeared for all checked tasks, but Act-required scenarios had no executable matches. This is a snapshot of those queries, not a claim about the entire index or future readiness. Rerun the preflight immediately before a demo and obtain an authorized provider response before claiming an end-to-end Act success.
+## Verification record · October 4, 2026
+
+The original Node contract suite, all three TypeScript example suites and typechecks, and all three Python example suites passed locally. These tests use a local fake API; they prove request construction and safety behavior, not external completion.
+
+The live Search preflight returned task-related results, but it exited nonzero: the general-assistant diagnostic had 8 relevant matches and no ready route (one first-use recheck); the IDE email-security task had no relevant match among its 8 results; shopping had 4 relevant matches after broader discovery and no ready route. The documentation Quickstart queries also had no ready route in that run. A separate job-openings query likewise returned unavailable routes. These observations apply only to those queries at that time, not the whole index.
+
+No new example has yet completed an OAuth → Act → external provider response replay, and Authenticate/Pay have only been exercised against local fixtures, not a live test provider. Rerun Search immediately before a demo, then obtain an authorized provider result before claiming a live end-to-end success. Never label a fixture output or an accepted thread as that proof.

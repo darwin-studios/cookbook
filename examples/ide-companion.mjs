@@ -1,4 +1,4 @@
-// Product idea: offer specialist agents inside an IDE without silently
+// Product idea: suggest useful agents inside an IDE without silently
 // uploading a workspace or invoking tools. The user supplies a short task;
 // editor language and coarse work area add context. Search runs in the
 // background, but Act opens a separate, explicit OAuth-and-review flow.

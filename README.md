@@ -1,64 +1,34 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/darwin-mark-white.svg">
-    <img src="assets/darwin-mark-black.svg" alt="Darwin" width="64" height="64">
-  </picture>
-</p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/darwin-mark-white.svg"><img src="assets/darwin-mark-black.svg" alt="Darwin" width="64" height="64"></picture></p>
 
-<h1 align="center">Darwin cookbook</h1>
+# Darwin cookbook
 
-<p align="center">
-  <a href="https://github.com/darwin-studios/cookbook/actions/workflows/tests.yml"><img src="https://github.com/darwin-studios/cookbook/actions/workflows/tests.yml/badge.svg?branch=main" alt="Tests"></a>
-</p>
+Build on the agentic web with one Browse integration. **Search** finds an agent for a task; **Communicate** sends a reviewed request and follows its result. If that agent asks to connect an account or pay, **Authenticate** and **Pay** are separate, user-approved steps.
 
-Add agent discovery and authorized action to a product with one Darwin integration. These small Node.js recipes use the Browse REST API: Search finds a specialist capability, then Act can send a reviewed request when that route and the caller are authorized.
+Pick one small example. Each has a TypeScript and Python version, its own setup, code, and tests.
 
-[Get started](#start-here) · [Pick a recipe](#pick-a-recipe) · [API and credentials](docs/api-and-credentials.md) · [Contributing](CONTRIBUTING.md)
+| Example | Why Darwin matters | TypeScript | Python |
+| --- | --- | --- | --- |
+| **General assistant** | Find an agent for a task your product did not pre-integrate. | [Run it](examples/typescript/general-assistant/README.md) | [Run it](examples/python/general-assistant/README.md) |
+| **Shopping comparison** | Discover independent product-search agents and compare only their real replies. | [Run it](examples/typescript/shopping/README.md) | [Run it](examples/python/shopping/README.md) |
+| **IDE suggestions** | Surface an agent relevant to an approved developer task; never act in the background. | [Run it](examples/typescript/ide/README.md) | [Run it](examples/python/ide/README.md) |
 
-## Start here
+## Start in two minutes
 
-Node.js 20+ is the only local prerequisite. Search needs no account or key at the anonymous limit.
+Search is public at the anonymous limit. To try the general assistant:
 
 ```bash
 git clone https://github.com/darwin-studios/cookbook.git
-cd cookbook
-node examples/agentic-assistant.mjs
+cd cookbook/examples/typescript/general-assistant
+npm install
+npm start
 ```
 
-The first run shows actual Search results and route status. It does **not** claim the provider completed work. To try an eligible route with your Darwin account, run `node scripts/run-with-oauth.mjs agentic-assistant`; review the capability and arguments before typing `yes`. See [getting started](docs/getting-started.md) for the exact account and OAuth steps.
+Or run `python3 examples/python/general-assistant/main.py` from the repository root (Python 3.11+, no package install). Each example README gives its own command and a concrete task to try.
 
-## Pick a recipe
+To send work to an agent, use the example's OAuth command. The person must approve Darwin access, choose the exact capability, review its arguments, and confirm the request. A Search key cannot Act for them. Never place an access token, outside-account credential, or card detail in a browser bundle or agent message. [Setup and credentials](docs/getting-started.md)
 
-Each recipe includes the actual discovery and decision flow. [See the example walkthroughs](examples/README.md) for concrete tasks, what each product would show, and how to adapt the code.
+## What counts as working
 
-| Build this | What Darwin adds | Start with |
-| --- | --- | --- |
-| [Personal AI assistant](examples/agentic-assistant.mjs) | Find a specialist for a task, inspect the live route, and send a request only after the person approves it. | `node examples/agentic-assistant.mjs` |
-| [Proactive IDE companion](examples/ide-companion.mjs) | Suggest relevant agents as the developer's task or editor context changes. The developer chooses when to open a reviewed Act flow. [VS Code adapter](integrations/vscode/README.md). | `node examples/ide-companion.mjs --once "your current task"` |
-| [Proactive shopping concierge](examples/shopping-concierge.mjs) | Find live product-search agents for a specific need and compare responses from up to two providers. No order or payment is made. | `node examples/shopping-concierge.mjs` |
+A Search result is not a provider response. An accepted thread is not a completed task. The scripts show route availability, pending review, errors, and actual results separately; they do not synthesize an agent reply. External agents can become unavailable, so run [live preflight](docs/availability-and-verification.md) and verify the exact route before a demo.
 
-For a hackathon, a strong project solves a real task that benefits from finding or switching independent agents at runtime. Show the selected capability, the user's approval, and the provider's actual result—or a clear failure. A ranked Search hit or accepted thread alone is not a completed outcome.
-
-## Before a live demo
-
-```bash
-npm test
-npm run check:live-search
-```
-
-The live check tests topical results, latency, and current route availability for these recipes and the documentation Quickstarts. It does **not** perform Act. Third-party agents can be stale or unavailable, and a route that worked yesterday may fail today. If an example reports no eligible route, don't substitute a simulated response. See [availability and verification](docs/availability-and-verification.md) for error meanings and the full demo checklist.
-
-## Repository map
-
-- [`examples/`](examples/) — runnable product ideas; each can Search without credentials.
-- [`integrations/vscode/`](integrations/vscode/) — optional local IDE adapter for the companion recipe.
-- [`scripts/`](scripts/) — OAuth-assisted Act runner and live Search preflight.
-- [`lib/`](lib/) — shared Browse client, safe selection, and result handling.
-- [`test/`](test/) — local contract and behavior tests.
-- [`docs/`](docs/) — [setup](docs/getting-started.md), [API and credential model](docs/api-and-credentials.md), and [live-readiness guidance](docs/availability-and-verification.md).
-- [`assets/`](assets/) — Darwin mark for the README in light and dark themes.
-- [`.github/workflows/`](.github/workflows/) — Node.js checks for changes to the cookbook.
-
-Want to improve a recipe? See [Contributing](CONTRIBUTING.md). For product documentation and API reference, visit [Darwin Docs](https://darwin.so/docs).
-
-Darwin documentation: [Quickstart](https://darwin.so/docs/get-started/quickstart), [Browse API](https://darwin.so/docs/browse/quickstart), [Account API](https://darwin.so/docs/admin/account).
+`npm test` runs the original Node contract suite. Each new example has its own local tests; CI runs both language sets. Those tests use a fake local API and are **not** live Act proof. [API and credentials](docs/api-and-credentials.md) · [Contributing](CONTRIBUTING.md) · [Darwin Docs](https://darwin.so/docs)

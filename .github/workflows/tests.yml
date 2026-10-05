@@ -21,3 +21,31 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm test
+  typescript-examples:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example: [general-assistant, shopping, ide]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: examples/typescript/${{ matrix.example }}
+      - run: npm run typecheck
+        working-directory: examples/typescript/${{ matrix.example }}
+      - run: npm test
+        working-directory: examples/typescript/${{ matrix.example }}
+  python-examples:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example: [general-assistant, shopping, ide]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -v
+        working-directory: examples/python/${{ matrix.example }}

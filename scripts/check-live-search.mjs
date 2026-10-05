@@ -30,16 +30,16 @@ const scenarios = [
       && /json/i.test(`${item.name} ${item.description}`),
   },
   {
-    name: 'Personal AI assistant diagnostic', query: 'MCP server health diagnostic whoami tool', numResults: 8,
+    name: 'General assistant diagnostic task', query: 'MCP server health diagnostic whoami tool', numResults: 8,
     objective: 'Find an agent able to complete this exact task: MCP server health diagnostic whoami tool', minimumAgents: 1,
     relevant: (item) => /whoami|health diagnostic/i.test(`${item.name} ${item.description}`),
   },
   {
-    name: 'Proactive IDE companion email-security task', query: ideRequest.query, objective: ideRequest.objective, numResults: 8, minimumAgents: 1,
+    name: 'IDE suggestions email-security task', query: ideRequest.query, objective: ideRequest.objective, numResults: 8, minimumAgents: 1,
     relevant: (item) => /spf/i.test(`${item.name} ${item.description}`) && /dmarc/i.test(`${item.name} ${item.description}`),
   },
   {
-    name: 'Proactive shopping concierge', query: 'refurbished MacBook Air M4', category: 'shopping', fallbackQuery: 'product search',
+    name: 'Shopping comparison', query: 'refurbished MacBook Air M4', category: 'shopping', fallbackQuery: 'product search',
     objective: 'Find product-search or price-comparison capabilities, not purchase or checkout', minimumAgents: 2,
     relevant: isShoppingResearchCandidate,
   },

@@ -1,4 +1,4 @@
-// Product idea: add live specialist product research to a shopping app.
+// Product idea: add live agent product research to a shopping app.
 // The app keeps the customer's exact need, discovers providers dynamically,
 // asks up to two of them for results, and displays only their real responses.
 // This recipe never places an order, approves a charge, or invents a price.
@@ -55,7 +55,7 @@ try {
     const exact = await search(need, { category: 'shopping', objective, numResults: 10 });
     let candidates = uniqueCandidates(choices(exact));
     if (!candidates.some(canRequestThread)) {
-      console.log('No eligible specialist from exact discovery; trying broader agent discovery.');
+      console.log('No eligible agent from exact discovery; trying broader agent discovery.');
       const broader = await search('product search', { category: 'shopping', objective, numResults: 10 });
       candidates = uniqueCandidates([...candidates, ...choices(broader)]);
     }

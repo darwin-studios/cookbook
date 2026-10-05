@@ -1,0 +1,13 @@
+{
+  "name": "darwin-example-shopping",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx index.ts",
+    "act": "node ../../../scripts/run-with-oauth.mjs shopping",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": { "tsx": "4.23.15", "typescript": "5.9.3", "@types/node": "^22.0.0" },
+  "engines": { "node": ">=20" }
+}

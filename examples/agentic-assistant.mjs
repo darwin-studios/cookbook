@@ -1,4 +1,4 @@
-// A general assistant can discover a specialist at request time instead of
+// A general assistant can discover an agent at request time instead of
 // shipping a connector for every provider. Run Search alone with:
 //   node examples/agentic-assistant.mjs
 // To authorize an actual request, use:
@@ -51,7 +51,7 @@ const io = terminal();
 try {
   // 1. Your assistant already has a user task. Ask Browse Search for matching
   // capabilities. Search does not contact the external provider.
-  const task = await io.ask('What should a specialist help with? ');
+  const task = await io.ask('What would you like to get done? ');
   if (task) {
     const found = await search(task, {
       objective: `Find an agent able to complete this exact task: ${task}`,

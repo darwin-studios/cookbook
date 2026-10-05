@@ -2,7 +2,8 @@ const vscode = require('vscode');
 const { spawn } = require('node:child_process');
 const { resolve } = require('node:path');
 
-const workerPath = resolve(__dirname, '../../examples/ide-companion.mjs');
+const workerPath = resolve(__dirname, '../../examples/typescript/ide/index.ts');
+const workerBinary = resolve(__dirname, '../../examples/typescript/ide/node_modules/.bin/tsx');
 const oauthPath = resolve(__dirname, '../../scripts/run-with-oauth.mjs');
 
 function activate(context) {
@@ -44,7 +45,7 @@ function activate(context) {
     if (worker && !worker.killed) return;
     const searchEnv = { ...process.env };
     delete searchEnv.DARWIN_ACCESS_TOKEN; // The background worker can only Search.
-    const current = spawn('node', [workerPath, '--stream'], { stdio: ['pipe', 'pipe', 'pipe'], env: searchEnv });
+    const current = spawn(workerBinary, [workerPath, '--stream'], { stdio: ['pipe', 'pipe', 'pipe'], env: searchEnv });
     worker = current;
     current.stdout.setEncoding('utf8');
     current.stdout.on('data', (chunk) => {
@@ -80,8 +81,8 @@ function activate(context) {
     current.stderr.setEncoding('utf8');
     current.stderr.on('data', (chunk) => output.appendLine(`Worker: ${chunk.trim()}`));
     current.on('error', (error) => {
-      status.text = 'Darwin: Node unavailable';
-      output.appendLine(`Could not start Node.js 20+: ${error.message}`);
+      status.text = 'Darwin: install example';
+      output.appendLine(`Install the IDE example first (cd examples/typescript/ide && npm install): ${error.message}`);
     });
     current.on('exit', () => {
       if (worker === current) { worker = undefined; status.text = 'Darwin: worker stopped'; }
@@ -133,7 +134,7 @@ function activate(context) {
       { modal: true }, 'Open reviewed Act flow',
     );
     if (answer !== 'Open reviewed Act flow') return;
-    const execution = new vscode.ProcessExecution('node', [oauthPath, 'ide-companion'], {
+    const execution = new vscode.ProcessExecution('node', [oauthPath, 'ide'], {
       env: { DARWIN_IDE_TASK: task, DARWIN_IDE_LANGUAGE: language(), DARWIN_IDE_WORK_AREA: workArea() },
     });
     const scope = vscode.workspace.workspaceFolders?.[0];

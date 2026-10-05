@@ -4,7 +4,7 @@ This small adapter runs the cookbook's local Search worker while you code. It is
 
 ## Try it
 
-Install Node.js 20+ and clone this cookbook. From its root, launch a VS Code window for the project you want to work on with the example extension loaded:
+Install Node.js 20+ and the [TypeScript IDE example](../../examples/typescript/ide/README.md) first. From the cookbook root, launch a VS Code window for the project you want to work on with the example extension loaded:
 
 ```bash
 code --extensionDevelopmentPath="$PWD/integrations/vscode" --new-window /path/to/your-project
@@ -19,10 +19,10 @@ To try a usable capability, select an eligible suggestion and choose **Open revi
 If `code` is unavailable, you can run the same Search worker directly:
 
 ```bash
-DARWIN_IDE_LANGUAGE=typescript node examples/ide-companion.mjs --once "I need an accessibility audit for a signup page"
+DARWIN_IDE_LANGUAGE=typescript examples/typescript/ide/node_modules/.bin/tsx examples/typescript/ide/index.ts --once "I need an accessibility audit for a signup page"
 ```
 
-For an always-on stdio integration, spawn `node examples/ide-companion.mjs --stream` and write one JSON line whenever your IDE's user-approved task or editor language changes:
+For an always-on stdio integration, spawn `examples/typescript/ide/node_modules/.bin/tsx examples/typescript/ide/index.ts --stream` and write one JSON line whenever your IDE's user-approved task or editor language changes:
 
 ```json
 {"task":"I need an accessibility audit for a signup page","language":"typescript"}
@@ -30,4 +30,4 @@ For an always-on stdio integration, spawn `node examples/ide-companion.mjs --str
 
 Each response is one JSON line containing ranked, relevance-filtered suggestions or an error. An OAuth access token is never returned to the IDE worker.
 
-To run the reviewed Act path from a terminal instead of VS Code, set `DARWIN_IDE_TASK="your current task"` and run `node scripts/run-with-oauth.mjs ide-companion` from the cookbook root. It asks for OAuth consent, re-searches, and requires exact capability selection and confirmation.
+To run the reviewed Act path from a terminal instead of VS Code, set `DARWIN_IDE_TASK="your current task"` and run `node scripts/run-with-oauth.mjs ide` from the cookbook root. It asks for OAuth consent, re-searches, and requires exact capability selection and confirmation.
