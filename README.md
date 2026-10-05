@@ -29,6 +29,8 @@ The first run shows actual Search results and route status. It does **not** clai
 
 ## Pick a recipe
 
+Each recipe includes the actual discovery and decision flow. [See the example walkthroughs](examples/README.md) for concrete tasks, what each product would show, and how to adapt the code.
+
 | Build this | What Darwin adds | Start with |
 | --- | --- | --- |
 | [Personal AI assistant](examples/agentic-assistant.mjs) | Find a specialist for a task, inspect the live route, and send a request only after the person approves it. | `node examples/agentic-assistant.mjs` |

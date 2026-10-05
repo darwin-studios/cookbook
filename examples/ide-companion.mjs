@@ -1,3 +1,10 @@
+// Product idea: offer specialist agents inside an IDE without silently
+// uploading a workspace or invoking tools. The user supplies a short task;
+// editor language and coarse work area add context. Search runs in the
+// background, but Act opens a separate, explicit OAuth-and-review flow.
+//
+// Try once: node examples/ide-companion.mjs --once "verify SPF and DMARC"
+// Stream:   node examples/ide-companion.mjs --stream
 import { createInterface } from 'node:readline';
 import { run } from '../lib/flow.mjs';
 import { search } from '../lib/darwin.mjs';
