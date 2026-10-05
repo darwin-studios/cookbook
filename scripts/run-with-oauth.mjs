@@ -7,8 +7,8 @@ import { fetchOAuthJson } from '../lib/oauth.mjs';
 
 const recipe = process.argv[2];
 const cookbookRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-if (!recipe || !['agentic-assistant', 'shopping-concierge', 'independent-release-gate', 'application-readiness', 'ide-companion'].includes(recipe)) {
-  console.error('Usage: node scripts/run-with-oauth.mjs <agentic-assistant|shopping-concierge|independent-release-gate|application-readiness|ide-companion>');
+if (!recipe || !['agentic-assistant', 'ide-companion', 'shopping-concierge'].includes(recipe)) {
+  console.error('Usage: node scripts/run-with-oauth.mjs <agentic-assistant|ide-companion|shopping-concierge>');
   process.exit(2);
 }
 const issuer = 'https://darwin.so/api/customer/auth';

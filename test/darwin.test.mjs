@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { canRequestThread, choices, search, startThread, sendThreadMessage, getThread, request, DarwinError } from '../lib/darwin.mjs';
-import { chosenReady, discover, hasProviderResult, isAccessibilityAuditCandidate, isDistinctAgent, isDistinctOperator, isSecurityHeadersCandidate, isShoppingResearchCandidate, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
+import { chosenReady, discover, hasProviderResult, isAccessibilityAuditCandidate, isShoppingResearchCandidate, providerMessages, readThread, requireReady, showOutcome } from '../lib/recipe.mjs';
 
 test('Search uses the local public-v2 body and preserves ranked IDs', async () => {
   const fetchImpl = async (_url, options) => {
@@ -35,12 +35,10 @@ test('Shopping recipe only offers product research candidates', () => {
   assert.equal(isShoppingResearchCandidate({ name: 'Product search', description: 'Search products and complete checkout for the customer.' }), false);
 });
 
-test('Release-gate discovery excludes sales offerings and keeps live audit tools', () => {
+test('Accessibility discovery excludes sales offerings and keeps live audit tools', () => {
   assert.equal(isAccessibilityAuditCandidate({ name: 'Get WCAG Accessibility Audit Offering', description: 'Returns scope and pricing bands for consulting.' }), false);
   assert.equal(isAccessibilityAuditCandidate({ name: 'audit_site_accessibility', description: 'Scan a live URL for WCAG violations.' }), true);
   assert.equal(isAccessibilityAuditCandidate({ name: 'Complete Brand Colour Audit', description: 'Check palette WCAG accessibility. For a live-site brand audit, inspect web pages first.' }), false);
-  assert.equal(isSecurityHeadersCandidate({ name: 'Get Security Audit Offering', description: 'Returns consulting pricing bands for HTTP security headers.' }), false);
-  assert.equal(isSecurityHeadersCandidate({ name: 'check_http_headers', description: 'Fetch a URL and grade HSTS and CSP security headers.' }), true);
 });
 
 test('Shopping discovery broadens provider search without changing the specific request', async () => {
@@ -170,17 +168,6 @@ test('A Search first-use candidate can request recheck, but it is not called rea
     if (previous === undefined) delete process.env.DARWIN_ACCESS_TOKEN;
     else process.env.DARWIN_ACCESS_TOKEN = previous;
   }
-});
-
-test('Independent checks cannot count two tools from the same agent as separate reviews', () => {
-  assert.equal(isDistinctAgent([{ agent: 'auditor-a' }], { agent: 'auditor-a' }), false);
-  assert.equal(isDistinctAgent([{ agent: 'auditor-a' }], { agent: 'auditor-b' }), true);
-});
-
-test('Independent checks require different named operators as well as different agent IDs', () => {
-  assert.equal(isDistinctOperator([{ operator: 'Edge Thirteen' }], ' edge   thirteen '), false);
-  assert.equal(isDistinctOperator([{ operator: 'Edge Thirteen' }], 'Another operator'), true);
-  assert.equal(isDistinctOperator([], ' '), false);
 });
 
 test('Caller messages are not presented as provider responses', () => {

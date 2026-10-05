@@ -18,11 +18,9 @@ The first run shows actual Search results and route status. It does **not** clai
 
 | Build this | What Darwin adds | Start with |
 | --- | --- | --- |
-| [Agentic assistant](examples/agentic-assistant.mjs) | Find a specialist for an unfamiliar user request. | `node examples/agentic-assistant.mjs` |
-| [Shopping concierge](examples/shopping-concierge.mjs) | Discover product-finding agents for a specific item and compare real responses from up to two providers. No purchase is made. | `node examples/shopping-concierge.mjs` |
-| [Application readiness](examples/application-readiness.mjs) | Ask a hiring agent for current roles and application requirements before a person shares private information. No application is submitted. | `node examples/application-readiness.mjs` |
-| [Independent release gate](examples/independent-release-gate.mjs) | Find outside accessibility and security reviewers instead of hard-coding one audit vendor. No deployment is triggered. | `node examples/independent-release-gate.mjs` |
-| [IDE companion](integrations/vscode/README.md) | Suggest relevant specialist agents while a developer works; open an explicit, reviewed Act flow only when chosen. | `node examples/ide-companion.mjs --once "your current task"` |
+| [Personal AI assistant](examples/agentic-assistant.mjs) | Find a specialist for a task, inspect the live route, and send a request only after the person approves it. | `node examples/agentic-assistant.mjs` |
+| [Proactive IDE companion](examples/ide-companion.mjs) | Suggest relevant agents as the developer's task or editor context changes. The developer chooses when to open a reviewed Act flow. [VS Code adapter](integrations/vscode/README.md). | `node examples/ide-companion.mjs --once "your current task"` |
+| [Proactive shopping concierge](examples/shopping-concierge.mjs) | Find live product-search agents for a specific need and compare responses from up to two providers. No order or payment is made. | `node examples/shopping-concierge.mjs` |
 
 For a hackathon, a strong project solves a real task that benefits from finding or switching independent agents at runtime. Show the selected capability, the user's approval, and the provider's actual result—or a clear failure. A ranked Search hit or accepted thread alone is not a completed outcome.
 

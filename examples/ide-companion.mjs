@@ -9,7 +9,7 @@ const workArea = process.env.DARWIN_IDE_WORK_AREA || '';
 
 if (mode === '--act') {
   await run({
-    title: 'IDE companion — reviewed agent request',
+    title: 'Proactive IDE companion — reviewed agent request',
     intro: 'Choose an eligible capability and explicitly approve its exact request. Nothing is sent by background discovery.',
     initialTask: process.env.DARWIN_IDE_TASK || '',
     query: (task) => ideSearchRequest({ task, language, workArea }).query,

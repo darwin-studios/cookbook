@@ -1,4 +1,4 @@
-# IDE companion (VS Code adapter)
+# Proactive IDE companion (VS Code adapter)
 
 This small adapter runs the cookbook's local Search worker while you code. It is an example extension, not a published marketplace package. It does not install another agent or send code to Darwin.
 

@@ -8,7 +8,7 @@ The agentic web is an open network. Some indexed agents or protocol implementati
 2. Run `npm run check:live-search` for fresh topical Search results, latency, and route availability. It intentionally exits nonzero if any Act-required example lacks enough task-matching ready agents. A first-use recheck candidate is not counted as ready.
 3. For an Act demonstration, complete OAuth for the acting person, select an eligible capability, send its reviewed request, and read the provider's result from the same thread. Show a real result or the exact failure; do not simulate it.
 
-The preflight covers the documentation Quickstarts and all five cookbook recipes. It requires one task-matching ready agent for each Quickstart, the assistant, the IDE companion, and the named-employer hiring example; two distinct shopping agents; and two distinct agent IDs across accessibility and security checks. Distinct IDs still do not prove independent operators. The live check also measures latency and fails above 5 seconds, or 10 seconds for shopping's exact-plus-fallback discovery. It does not execute provider actions.
+The preflight covers the documentation Quickstarts and all three cookbook recipes. It requires one task-matching ready agent for each Act-required Quickstart, the personal AI assistant, and the proactive IDE companion, plus two distinct shopping agents for the concierge comparison. The Search-only invoice example checks result relevance without requiring an executable route. The live check also measures latency and fails above 5 seconds, or 10 seconds for shopping's exact-plus-fallback discovery. It does not execute provider actions.
 
 ## Interpreting a failure
 

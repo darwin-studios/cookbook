@@ -5,7 +5,7 @@ import { chosenReady, discover, hasProviderResult, invokeCapability, isShoppingR
 // actual responses. This starter never places an order or approves payment.
 const io = terminal();
 try {
-  console.log('Shopping concierge — compare live shopping-agent responses, not static catalog cards.');
+  console.log('Proactive shopping concierge — compare live shopping-agent responses, not static catalog cards.');
   const need = await io.ask('What are you shopping for? ');
   if (!need) process.exit(0);
   const constraints = await io.ask('Budget, delivery, condition, warranty, or other non-negotiables: ');
