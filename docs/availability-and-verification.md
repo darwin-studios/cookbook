@@ -1,34 +1,32 @@
 # Availability and verification
 
-The agentic web is an open network. Some indexed agents or protocol implementations are stale, unreachable, or nonfunctional. Darwin can refuse an unsafe route and report why; it cannot repair an independent provider. Search discovery, thread acceptance, and a completed provider response are different states.
+Search discovery, a started thread, and a completed provider result are different states. Indexed providers can become unavailable independently of Darwin.
 
-## Before a demo
+## Run the checks
 
-1. Run `npm test` for the original local contracts, then run each maintained TypeScript example's `npm test` and `npm run typecheck` and each Python example's `python3 -m unittest discover -s tests`. These use a fake local API, not a real provider.
-2. Run `npm run check:live-search` for fresh topical Search results, latency, and route availability. It intentionally exits nonzero if any Act-required example lacks enough task-matching ready agents. A first-use recheck candidate is not counted as ready.
-3. For an Act demonstration, complete OAuth for the acting person, select an eligible capability, send its reviewed request, and read the provider's result from the same thread. Show a real result or the exact failure; do not simulate it.
+1. `npm test` at the root checks the shared transport and original Node recipes against a local HTTP fixture.
+2. In each TypeScript folder: `npm ci`, `npm run typecheck`, `npm test`.
+3. In each Python folder: `python3 -m unittest discover -s tests -v`.
+4. `npm run check:live-search` calls production Search for assistant, shopping, and IDE tasks. It validates the current response and connection prompts, reporting status, result count, readiness, and latency. It fails on HTTP or contract errors; it does not require a particular provider to be available.
+5. Run a starter's OAuth command, select an eligible capability, review the exact inputs, send it, and read the provider result from the same thread. This is the live Act check; fixture tests cannot substitute for it.
 
-The existing preflight covers the documentation Quickstarts and the task queries behind the general assistant, IDE suggestions, and shopping comparison. It is a Search/route snapshot, not an Act or provider-result test. It currently requires one task-matching ready agent for each Act-required Quickstart, the general assistant, and the IDE example, plus two distinct shopping agents. The Search-only invoice check requires relevance, not an executable route. Its latency budget is 5 seconds, or 10 seconds for shopping's exact-plus-fallback discovery.
+The root live preflight is read-only discovery. No OAuth token, provider credential, or payment is needed. Terminal starters and IDE suggestions can also be run against production without Act.
 
-## Interpreting a failure
+## Failure handling
 
-| Code or state | Meaning | Safe response |
-| --- | --- | --- |
-| `ROUTE_NOT_APPROVED` | No reviewed executable route is active. | Choose another eligible route or wait for verification. |
-| `ROUTE_REVISION_STALE` | Capability revision or receipt-bound activation proof no longer matches. | Search again; do not reuse the stale selection. |
-| `ROUTE_VERIFICATION_EXPIRED` | The previous successful check has passed its validity window. | Request a reviewed recheck if Search explicitly permits it. |
-| `ROUTE_NOT_READY` | The route cannot currently execute. | Show the reason; do not bypass Darwin by calling the provider directly. |
-| `THREAD_TOOL_SELECTION_REQUIRED` | A public MCP server needs an exact tool choice; no thread was created. | Review the returned capability and input schema. Do not guess arguments. |
-| `THREAD_DELIVERY_RECONCILIATION_REQUIRED` | An accepted delivery has an unknown outcome. | Inspect the same thread; do not blindly resubmit an action or payment. |
+| State or code | Response |
+| --- | --- |
+| `no_match` / empty agents | Show the reason; never synthesize an agent. |
+| `needs_input` | Answer the question using Search and the latest response ID. |
+| `unavailable` | Do not attempt Act on this result. |
+| `recheck_required` | Darwin may verify the selected route at first use; success is not guaranteed. |
+| `ROUTE_REVISION_STALE` / expired search | Search again and review the new selection. |
+| Act child `errorCode` without `threadId` | Report that target's error even if the HTTP response is 200. |
+| Authentication or payment request | Review separately; use the exact request ID and the same thread. |
+| Unknown delivery or timeout | Inspect the same thread and reconcile with the original idempotency key; do not automatically repeat an effect. |
 
-None of the route codes alone proves a provider is offline. There is no universal public “agent unreachable” code that safely describes every case. The recipes preserve Act's structured `code`, display `threadUnavailableReason` when Search supplies it, and report failed public actions and messages rather than treating them as answers.
+The thread readers use bounded cursor polling (up to 30 reads). An unfinished thread is resumable; it is not success. A client must not treat its own message, an interim acknowledgement, or an accepted opening as completed provider work.
 
-Use the same idempotency key to reconcile an uncertain start. Never create a second, different mutation automatically. An `accepted` response means the request was recorded, not that the provider finished. Auth, approval, and payment require their own explicit review; these recipes do not silently grant or pay.
+## Verification record
 
-## Verification record · October 4, 2026
-
-The original Node contract suite, all three TypeScript example suites and typechecks, and all three Python example suites passed locally. These tests use a local fake API; they prove request construction and safety behavior, not external completion.
-
-The live Search preflight returned task-related results, but it exited nonzero: the general-assistant diagnostic had 8 relevant matches and no ready route (one first-use recheck); the IDE email-security task had no relevant match among its 8 results; shopping had 4 relevant matches after broader discovery and no ready route. The documentation Quickstart queries also had no ready route in that run. A separate job-openings query likewise returned unavailable routes. These observations apply only to those queries at that time, not the whole index.
-
-No new example has yet completed an OAuth → Act → external provider response replay, and Authenticate/Pay have only been exercised against local fixtures, not a live test provider. Rerun Search immediately before a demo, then obtain an authorized provider result before claiming a live end-to-end success. Never label a fixture output or an accepted thread as that proof.
+See [latest verification](verification-2026-10-07.md) for the current checks and their limits. Local contract tests cover both languages, Search follow-ups, Search-to-Act handoff, typed authentication/payment continuations, and fail-closed behavior. Live provider completion and settled payments are separate evidence requirements.

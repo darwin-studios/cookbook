@@ -1,12 +1,21 @@
-import { canRequestThread, choices, hasActCredential, search, startThread } from '../../../lib/darwin.mjs';
-import { hasProviderResult, readThread, reviewPending, showOutcome, terminal } from '../../../lib/recipe.mjs';
+import { canRequestThread, choices, hasActCredential, startThread } from '../../../lib/darwin.mjs';
+import {
+  hasProviderResult,
+  readThread,
+  reviewPending,
+  searchWithQuestions,
+  showOutcome,
+  showSearchDetails,
+  terminal,
+} from '../../../lib/recipe.mjs';
 
 const io = terminal();
 try {
-  const task = process.env.DARWIN_INITIAL_TASK || await io.ask('What would you like to get done? ');
+  const task = process.env.DARWIN_INITIAL_TASK || (await io.ask('What would you like to get done? '));
   if (!task) throw new Error('Enter a task to search for.');
-  const found = await search(task, { objective: task, numResults: 5 });
+  const found = await searchWithQuestions(io, task, { maxResults: 5 });
   const results = choices(found);
+  showSearchDetails(found);
   console.log(`\n${results.length} matching capabilities`);
   results.forEach((item: any, index: number) => {
     const available = canRequestThread(item) ? item.readiness : item.threadUnavailableReason || 'unavailable';
@@ -22,11 +31,16 @@ try {
     if (!canRequestThread(selected)) throw new Error('Choose a listed, available capability.');
     const mode = await io.ask('Ask a question [m] or run this capability [a]? ');
     if (!['m', 'a'].includes(mode)) throw new Error('No request sent.');
-    const content = mode === 'm' ? task : JSON.parse(await io.ask('Arguments as JSON object ({} for none): ') || '{}');
-    if (mode === 'a' && (!content || Array.isArray(content) || typeof content !== 'object')) throw new Error('Arguments must be a JSON object.');
+    const content =
+      mode === 'm' ? task : JSON.parse((await io.ask('Arguments as JSON object ({} for none): ')) || '{}');
+    if (mode === 'a' && (!content || Array.isArray(content) || typeof content !== 'object'))
+      throw new Error('Arguments must be a JSON object.');
     console.log(`\nTo: ${selected.agentName} / ${selected.name}\nRequest: ${JSON.stringify(content)}`);
     if ((await io.ask('Send this exact request? Type yes: ')) !== 'yes') throw new Error('No request sent.');
-    const started = await startThread(selected, { messageType: mode === 'm' ? 'message' : 'action_request', messageContent: content });
+    const started = await startThread(selected, {
+      messageType: mode === 'm' ? 'message' : 'action_request',
+      messageContent: content,
+    });
     console.log(`Accepted on thread ${started.thread}; this is not a result.`);
     let outcome = await readThread(started.thread, started.cursor, { requireResult: mode === 'a' });
     if (outcome.pending.length) outcome = await reviewPending(io, outcome);
@@ -37,4 +51,6 @@ try {
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
-} finally { io.close(); }
+} finally {
+  io.close();
+}

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from shared.browse import choices, eligible, has_result, read_thread, review_pending, search, send_thread_message, show_outcome, start_thread
+from shared.browse import DarwinError, show_connection_details, choices, eligible, has_result, read_thread, review_pending, search, send_thread_message, show_outcome, start_thread
 
 
 def product_research(item):
@@ -23,10 +23,10 @@ def run():
     constraints = input("Budget, condition, delivery, or other requirements: ").strip()
     query = f"{item} {constraints}".strip()
     objective = "Find current product offers, not a checkout action"
-    found = choices(search(query, category="shopping", objective=objective, numResults=10))
+    found = choices(search(query, context=[{"type": "text", "text": objective}], maxResults=10))
     if not any(eligible(choice) for choice in found if product_research(choice)):
         print("No available match for the exact item. Broadening agent discovery; the item and constraints remain unchanged.")
-        found += choices(search("product search", category="shopping", objective=objective, numResults=10))
+        found += choices(search("product search", context=[{"type": "text", "text": f"{query}. {objective}"}], maxResults=10))
     by_agent = {}
     for choice in found:
         if not product_research(choice):
@@ -35,6 +35,7 @@ def run():
         if previous is None or (not eligible(previous) and eligible(choice)):
             by_agent[choice["agent"]] = choice
     results = list(by_agent.values())
+    show_connection_details(results)
     print(f"\n{len(results)} distinct product-search agents")
     for index, choice in enumerate(results, 1):
         status = choice.get("readiness") if eligible(choice) else choice.get("threadUnavailableReason", "unavailable")
@@ -52,13 +53,13 @@ def run():
     outcomes = []
     for choice in selected:
         print(f"\n{choice['agentName']} / {choice['name']}\nKeep the request exact: {query}")
-        print("Advertised inputs:", json.dumps(choice.get("input", {}).get("fields", [])))
+        print("Use the capability documentation linked in its connection prompt to review arguments.")
         args = json.loads(input("Reviewed JSON arguments for this agent: ") or "{}")
         if not isinstance(args, dict):
             raise ValueError("Arguments must be a JSON object")
         if input(f"Send {json.dumps(args)} to this agent? Type yes: ").strip() != "yes":
             continue
-        started = start_thread(choice, "action_request", args)
+        started = start_thread({**choice, "query": query}, "action_request", args)
         print(f"Accepted on thread {started['thread']}; waiting for a result.")
         outcome = read_thread(started["thread"], started.get("cursor"))
         if any(request.get("type") == "authentication_request" for request in outcome["pending"]):
@@ -92,6 +93,6 @@ def run():
 if __name__ == "__main__":
     try:
         run()
-    except (ValueError, KeyError, IndexError, OSError) as error:
+    except (DarwinError, ValueError, KeyError, IndexError, OSError) as error:
         print(error, file=sys.stderr)
         sys.exit(1)

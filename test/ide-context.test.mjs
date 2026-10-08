@@ -1,13 +1,19 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
+
 import { ideSearchRequest, ideSuggestions, normalizeIdeContext, taskTerms } from '../lib/ide-context.mjs';
+import { found as searchFixture } from './fixtures.mjs';
 
 const task = 'I need to verify live DNS SPF and DMARC records for our sending domain';
 
 test('IDE context forwards only an explicit bounded task and editor language', () => {
   const context = normalizeIdeContext({
-    task: `  ${task}  `, language: 'TypeScript', workArea: 'Tests',
-    sourceText: 'SECRET_CODE', filePath: '/private/customer.ts', diagnostics: 'customer data',
+    task: `  ${task}  `,
+    language: 'TypeScript',
+    workArea: 'Tests',
+    sourceText: 'SECRET_CODE',
+    filePath: '/private/customer.ts',
+    diagnostics: 'customer data',
   });
   assert.deepEqual(context, { task, language: 'typescript', workArea: 'tests' });
   const request = ideSearchRequest(context);
@@ -22,16 +28,23 @@ test('IDE context forwards only an explicit bounded task and editor language', (
 
 test('IDE suggestions suppress a superficially matched service and retain exact eligible IDs', () => {
   assert.deepEqual(taskTerms(task).acronyms, ['dns', 'spf', 'dmarc']);
-  const found = {
-    agents: [
-      { agent: 'unrelated', name: 'SaaS DNS token reader' },
-      { agent: 'email-agent', name: 'Email security agent' },
-    ],
-    results: [
-      { agent: 'unrelated', capability: 'txt-token', name: 'DNS TXT verification', description: 'Which SaaS vendors use this domain', readiness: 'unavailable' },
-      { agent: 'email-agent', capability: 'spf-dmarc', name: 'Check SPF and DMARC', description: 'Read live DNS records for a sending domain', readiness: 'ready', canStartThread: true },
-    ],
-  };
+  const found = searchFixture([
+    {
+      agentId: 'unrelated',
+      capabilityId: 'txt-token',
+      name: 'DNS TXT verification',
+      description: 'Which SaaS vendors use this domain',
+      readiness: 'unavailable',
+    },
+    {
+      agentId: 'email-agent',
+      capabilityId: 'spf-dmarc',
+      name: 'Check SPF and DMARC',
+      description: 'Read live DNS records for a sending domain',
+      readiness: 'ready',
+      canStartThread: true,
+    },
+  ]);
   const suggestions = ideSuggestions(found, { task });
   assert.equal(suggestions.length, 1);
   assert.equal(suggestions[0].rank, 2);
@@ -42,9 +55,15 @@ test('IDE suggestions suppress a superficially matched service and retain exact 
 });
 
 test('IDE suggestions can be empty rather than inventing a suitable agent', () => {
-  const found = {
-    agents: [{ agent: 'chart', name: 'Nautical chart agent' }],
-    results: [{ agent: 'chart', capability: 'depth', name: 'Read chart depth', description: 'Marine navigation', readiness: 'ready', canStartThread: true }],
-  };
+  const found = searchFixture([
+    {
+      agentId: 'chart',
+      capabilityId: 'depth',
+      name: 'Read chart depth',
+      description: 'Marine navigation',
+      readiness: 'ready',
+      canStartThread: true,
+    },
+  ]);
   assert.deepEqual(ideSuggestions(found, { task }), []);
 });

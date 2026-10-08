@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "check:live-search": "node scripts/check-live-search.mjs"
+    "check:live-search": "node scripts/check-live-search.mjs",
+    "check:live-examples": "node scripts/check-live-examples.mjs",
+    "check:live-continuation": "node scripts/check-live-continuation.mjs"
   },
   "engines": {
     "node": ">=20"

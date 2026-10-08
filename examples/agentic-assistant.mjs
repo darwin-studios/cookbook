@@ -6,18 +6,24 @@
 //
 // This is a terminal product prototype. A real app would put these steps in
 // its own UI and keep the OAuth token on its server.
+import { canRequestThread, choices, hasActCredential, startThread } from '../lib/darwin.mjs';
 import {
-  canRequestThread, choices, hasActCredential, search, startThread,
-} from '../lib/darwin.mjs';
-import { hasProviderResult, providerMessages, readThread, terminal } from '../lib/recipe.mjs';
+  hasProviderResult,
+  providerMessages,
+  readThread,
+  searchWithQuestions,
+  showSearchDetails,
+  terminal,
+} from '../lib/recipe.mjs';
 
 function showCandidate(candidate, index) {
   const description = candidate.description?.replace(/\s+/g, ' ').slice(0, 200) || 'No description';
-  const status = candidate.readiness === 'ready' && candidate.canStartThread
-    ? 'READY'
-    : candidate.readiness === 'recheck_available' && candidate.canAttemptThread
-      ? 'RECHECK REQUIRED'
-      : 'UNAVAILABLE';
+  const status =
+    candidate.readiness === 'ready' && candidate.canStartThread
+      ? 'READY'
+      : candidate.readiness === 'recheck_required' && canRequestThread(candidate)
+        ? 'RECHECK REQUIRED'
+        : 'UNAVAILABLE';
   console.log(`${index + 1}. ${candidate.agentName} / ${candidate.name} [${status}]`);
   console.log(`   ${description}`);
   console.log(`   Agent ID: ${candidate.agent} · Capability ID: ${candidate.capability}`);
@@ -25,8 +31,9 @@ function showCandidate(candidate, index) {
     console.log(`   Cannot Act: ${candidate.threadUnavailableReason}`);
   }
   if (candidate.input?.available) {
-    const fields = candidate.input.fields.map((field) =>
-      `${field.name}${field.required ? '*' : ''} (${field.valueType})`);
+    const fields = candidate.input.fields.map(
+      (field) => `${field.name}${field.required ? '*' : ''} (${field.valueType})`,
+    );
     console.log(`   Inputs: ${fields.join(', ') || 'none'}`);
   }
 }
@@ -43,22 +50,25 @@ function showOutcome(outcome) {
     console.log(`Needs separate review: ${request.type} ${request.request}`);
   }
   if (outcome.errors.length) {
-    throw new Error(`Thread ${outcome.thread} failed: ${outcome.errors.map((error) => error.code).join(', ')}. Inspect this thread before any retry.`);
+    throw new Error(
+      `Thread ${outcome.thread} failed: ${outcome.errors.map((error) => error.code).join(', ')}. Inspect this thread before any retry.`,
+    );
   }
 }
 
 const io = terminal();
 try {
-  // 1. Your assistant already has a user task. Ask Browse Search for matching
+  // 1. Your assistant already has a user task. Ask Search for matching
   // capabilities. Search does not contact the external provider.
   const task = await io.ask('What would you like to get done? ');
   if (task) {
-    const found = await search(task, {
-      objective: `Find an agent able to complete this exact task: ${task}`,
-      numResults: 8,
+    const found = await searchWithQuestions(io, task, {
+      context: [{ type: 'text', text: `Find an agent able to complete this exact task: ${task}` }],
+      maxResults: 8,
     });
     const ranked = choices(found);
-    console.log(`\nSearch outcome: ${found.outcome || 'unknown'}; ${ranked.length} ranked capabilities`);
+    showSearchDetails(found);
+    console.log(`\nSearch outcome: ${found.status || 'unknown'}; ${ranked.length} ranked capabilities`);
     ranked.forEach(showCandidate);
 
     // A result can be useful for discovery even when its route cannot execute.
@@ -88,8 +98,11 @@ try {
         } else if (mode === 'a') {
           messageType = 'action_request';
           const raw = await io.ask('Capability arguments as JSON object ({} if none): ');
-          try { messageContent = JSON.parse(raw || '{}'); }
-          catch { throw new Error('Arguments must be valid JSON.'); }
+          try {
+            messageContent = JSON.parse(raw || '{}');
+          } catch {
+            throw new Error('Arguments must be valid JSON.');
+          }
           if (!messageContent || Array.isArray(messageContent) || typeof messageContent !== 'object') {
             throw new Error('Arguments must be a JSON object.');
           }
@@ -102,11 +115,11 @@ try {
           // mutation in this recipe. Auth, approval, and payment remain separate.
           console.log(`\nTarget: ${selected.agentName} / ${selected.name}`);
           console.log(`Request: ${messageType} ${JSON.stringify(messageContent)}`);
-          if (selected.readiness === 'recheck_available') {
+          if (selected.readiness === 'recheck_required') {
             console.log('Darwin must verify this route at first use; verification may still fail.');
           }
           if ((await io.ask('Send this exact request? Type yes: ')) === 'yes') {
-            // POST /api/v2/act/threads atomically records the first typed
+            // POST /api/v3/act atomically records the first typed
             // message. Its accepted status is not a completed provider result.
             const started = await startThread(selected, { messageType, messageContent });
             console.log(`Accepted on thread ${started.thread}. Waiting for the actual provider response…`);
@@ -117,11 +130,14 @@ try {
               requireResult: messageType === 'action_request',
             });
             showOutcome(outcome);
-            const complete = messageType === 'action_request'
-              ? hasProviderResult(outcome.messages)
-              : providerMessages(outcome.messages).length > 0;
+            const complete =
+              messageType === 'action_request'
+                ? hasProviderResult(outcome.messages)
+                : providerMessages(outcome.messages).length > 0;
             if (!complete) {
-              throw new Error(`Thread ${started.thread} has no completed provider response yet. Acceptance is not completion.`);
+              throw new Error(
+                `Thread ${started.thread} has no completed provider response yet. Acceptance is not completion.`,
+              );
             }
           } else {
             console.log('No Act request sent.');

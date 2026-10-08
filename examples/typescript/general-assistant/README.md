@@ -12,4 +12,4 @@ Try “check live SPF and DMARC records for my domain.” Search needs no accoun
 
 **Expected:** ranked capabilities first; a completed answer only after a real agent result. An accepted thread is not an answer. If no route is available, the example stops without contacting an agent. Authentication and payment requests, if returned, require a separate hosted review.
 
-Read [index.ts](index.ts) for the full task flow. The [Browse API guide](../../../docs/api-and-credentials.md) explains credentials and endpoint names.
+Read [index.ts](index.ts) for the full task flow. The [Search and Act API guide](../../../docs/api-and-credentials.md) explains credentials and endpoint names.

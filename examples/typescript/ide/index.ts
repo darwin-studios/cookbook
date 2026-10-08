@@ -1,4 +1,5 @@
 import { createInterface } from 'node:readline';
+
 import { search } from '../../../lib/darwin.mjs';
 import { ideSearchRequest, ideSuggestions, normalizeIdeContext } from '../../../lib/ide-context.mjs';
 
@@ -18,9 +19,12 @@ async function suggest(input: unknown) {
   lastAt = Date.now();
   try {
     const request = ideSearchRequest(context);
-    const found = await search(request.query, { objective: request.objective, numResults: 8 });
-    emit({ type: 'suggestions', ...context, outcome: found.outcome, suggestions: ideSuggestions(found, context) });
-  } catch (error) { last = ''; emit({ type: 'error', message: error instanceof Error ? error.message : String(error) }); }
+    const found = await search(request.query, { context: [{ type: 'text', text: request.objective }], maxResults: 8 });
+    emit({ type: 'suggestions', ...context, outcome: found.status, suggestions: ideSuggestions(found, context) });
+  } catch (error) {
+    last = '';
+    emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+  }
 }
 if (once) {
   await suggest({ task: process.argv[3], language: process.env.DARWIN_IDE_LANGUAGE || '' });
@@ -34,7 +38,9 @@ if (once) {
         const delay = Math.max(0, 30_000 - (Date.now() - lastAt));
         timer = setTimeout(() => suggest(pending), delay);
       }, 1000);
-    } catch (error) { emit({ type: 'error', message: error instanceof Error ? error.message : String(error) }); }
+    } catch (error) {
+      emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+    }
   });
   emit({ type: 'ready', message: 'Send {"task":"approved summary","language":"typescript"} as JSON lines.' });
 }

@@ -2,11 +2,14 @@
 // The app keeps the customer's exact need, discovers providers dynamically,
 // asks up to two of them for results, and displays only their real responses.
 // This recipe never places an order, approves a charge, or invents a price.
+import { canRequestThread, choices, hasActCredential, search, startThread } from '../lib/darwin.mjs';
 import {
-  canRequestThread, choices, hasActCredential, search, startThread,
-} from '../lib/darwin.mjs';
-import {
-  hasProviderResult, isShoppingResearchCandidate, readThread, showOutcome, terminal,
+  hasProviderResult,
+  isShoppingResearchCandidate,
+  readThread,
+  showConnectionDetails,
+  showOutcome,
+  terminal,
 } from '../lib/recipe.mjs';
 
 const objective = 'Find product-search or price-comparison capabilities, not purchase or checkout';
@@ -24,17 +27,23 @@ function uniqueCandidates(results) {
 
 function showCandidates(candidates) {
   candidates.forEach((item, index) => {
-    const route = item.readiness === 'ready' && item.canStartThread
-      ? 'READY'
-      : item.readiness === 'recheck_available' && item.canAttemptThread
-        ? 'RECHECK REQUIRED'
-        : 'UNAVAILABLE';
+    const route =
+      item.readiness === 'ready' && item.canStartThread
+        ? 'READY'
+        : item.readiness === 'recheck_required' && canRequestThread(item)
+          ? 'RECHECK REQUIRED'
+          : 'UNAVAILABLE';
     console.log(`${index + 1}. ${item.agentName} / ${item.name} [${route}]`);
     console.log(`   ${item.description?.replace(/\s+/g, ' ').slice(0, 180) || 'No description'}`);
     console.log(`   Agent ID: ${item.agent} · Capability ID: ${item.capability}`);
     if (item.input?.available) {
-      console.log(`   Inputs: ${item.input.fields.map((field) =>
-        `${field.name}${field.required ? '*' : ''} (${field.valueType})`).join(', ') || 'none'}`);
+      console.log(
+        `   Inputs: ${
+          item.input.fields
+            .map((field) => `${field.name}${field.required ? '*' : ''} (${field.valueType})`)
+            .join(', ') || 'none'
+        }`,
+      );
     }
     if (route === 'UNAVAILABLE' && item.threadUnavailableReason) {
       console.log(`   Cannot Act: ${item.threadUnavailableReason}`);
@@ -52,15 +61,22 @@ try {
     // 1. Search for an agent that can research this exact request. If none is
     // currently executable, broaden AGENT discovery only. Never replace the
     // item or constraints in the eventual provider request.
-    const exact = await search(need, { category: 'shopping', objective, numResults: 10 });
+    const exact = await search(need, {
+      context: [{ type: 'text', text: `${need}. ${constraints}. ${objective}` }],
+      maxResults: 10,
+    });
     let candidates = uniqueCandidates(choices(exact));
     if (!candidates.some(canRequestThread)) {
       console.log('No eligible agent from exact discovery; trying broader agent discovery.');
-      const broader = await search('product search', { category: 'shopping', objective, numResults: 10 });
+      const broader = await search('product search', {
+        context: [{ type: 'text', text: `${need}. ${constraints}. ${objective}` }],
+        maxResults: 10,
+      });
       candidates = uniqueCandidates([...candidates, ...choices(broader)]);
     }
     console.log(`\n${candidates.length} product-research capabilities found:`);
     showCandidates(candidates);
+    showConnectionDetails(candidates);
 
     if (!candidates.some(canRequestThread)) {
       console.log('No eligible route to compare now. Search worked, but no provider was contacted.');
@@ -71,8 +87,14 @@ try {
       // 2. The person chooses up to two distinct agents, not two tools from
       // one agent. They must review each capability's effect and input schema.
       const raw = await io.ask('Choose up to two eligible numbers (comma-separated; Enter to stop): ');
-      const numbers = [...new Set(raw.split(',').map((value) => Number(value.trim()))
-        .filter((number) => Number.isInteger(number) && number > 0))].slice(0, 2);
+      const numbers = [
+        ...new Set(
+          raw
+            .split(',')
+            .map((value) => Number(value.trim()))
+            .filter((number) => Number.isInteger(number) && number > 0),
+        ),
+      ].slice(0, 2);
       const selected = numbers.map((number) => {
         const item = candidates[number - 1];
         if (!item || !canRequestThread(item)) throw new Error('Choose listed, eligible capabilities only.');
@@ -81,7 +103,11 @@ try {
       if (new Set(selected.map((item) => item.agent)).size !== selected.length) {
         throw new Error('Choose distinct agents, not two tools from the same agent.');
       }
-      if (selected.length && (await io.ask('Confirm these are search/quote capabilities, not purchase or checkout actions. Type yes: ')) === 'yes') {
+      if (
+        selected.length &&
+        (await io.ask('Confirm these are search/quote capabilities, not purchase or checkout actions. Type yes: ')) ===
+          'yes'
+      ) {
         const outcomes = [];
         for (const provider of selected) {
           // Providers have different input schemas, so the developer supplies
@@ -91,13 +117,16 @@ try {
           console.log(`Keep this request intact: ${need}. Constraints: ${constraints || 'none'}.`);
           const rawArguments = await io.ask('JSON arguments for this capability ({} if none): ');
           let args;
-          try { args = JSON.parse(rawArguments || '{}'); }
-          catch { throw new Error('Arguments must be valid JSON.'); }
+          try {
+            args = JSON.parse(rawArguments || '{}');
+          } catch {
+            throw new Error('Arguments must be valid JSON.');
+          }
           if (!args || Array.isArray(args) || typeof args !== 'object') {
             throw new Error('Arguments must be a JSON object.');
           }
           console.log(`Review ${provider.agentName} / ${provider.name}: ${JSON.stringify(args)}`);
-          if (provider.readiness === 'recheck_available') {
+          if (provider.readiness === 'recheck_required') {
             console.log('Darwin must verify this exact route at first use; it may still fail.');
           }
           if ((await io.ask('Send this exact product-research request? Type yes: ')) !== 'yes') {
@@ -107,9 +136,13 @@ try {
 
           // 3. Start one thread per provider with a typed action request.
           // An accepted thread is not an offer or a completed comparison.
-          const started = await startThread(provider, {
-            messageType: 'action_request', messageContent: args,
-          });
+          const started = await startThread(
+            { ...provider, query: `${need} ${constraints}`.trim() },
+            {
+              messageType: 'action_request',
+              messageContent: args,
+            },
+          );
           console.log(`Accepted on thread ${started.thread}; waiting for an external result…`);
           const outcome = await readThread(started.thread, started.cursor, { requireResult: true });
           outcomes.push({ provider, outcome });
@@ -122,10 +155,14 @@ try {
           showOutcome(provider.agentName, outcome);
         }
         if (outcomes.some(({ outcome }) => outcome.errors.length || !hasProviderResult(outcome.messages))) {
-          throw new Error('At least one provider did not return a completed result. Do not present this as a finished comparison.');
+          throw new Error(
+            'At least one provider did not return a completed result. Do not present this as a finished comparison.',
+          );
         }
         if (outcomes.length) {
-          console.log('\nCompare the returned product details and links above. This recipe never calls Pay or confirms checkout.');
+          console.log(
+            '\nCompare the returned product details and links above. This recipe never calls Pay or confirms checkout.',
+          );
         }
       } else {
         console.log('No provider requests sent.');

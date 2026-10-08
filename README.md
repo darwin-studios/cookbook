@@ -2,7 +2,7 @@
 
 # Darwin cookbook
 
-Build on the agentic web with one Browse integration. **Search** finds an agent for a task; **Communicate** sends a reviewed request and follows its result. If that agent asks to connect an account or pay, **Authenticate** and **Pay** are separate, user-approved steps.
+Build on the agentic web with **Search** and **Act**. Search returns agents, reasoning, connection prompts, and a plan when useful. Act starts work and handles follow-up messages, authentication, and payment through the same endpoint, with explicit user review.
 
 Pick one small example. Each has a TypeScript and Python version, its own setup, code, and tests.
 
@@ -31,4 +31,4 @@ To send work to an agent, use the example's OAuth command. The person must appro
 
 A Search result is not a provider response. An accepted thread is not a completed task. The scripts show route availability, pending review, errors, and actual results separately; they do not synthesize an agent reply. External agents can become unavailable, so run [live preflight](docs/availability-and-verification.md) and verify the exact route before a demo.
 
-`npm test` runs the original Node contract suite. Each new example has its own local tests; CI runs both language sets. Those tests use a fake local API and are **not** live Act proof. [API and credentials](docs/api-and-credentials.md) · [Contributing](CONTRIBUTING.md) · [Darwin Docs](https://darwin.so/docs)
+`npm test` runs the original Node contract suite. Each new example has its own local tests; CI runs both language sets. Those tests use a fake local API and are **not** live Act proof. [Latest verification](docs/verification-2026-10-07.md) · [API and credentials](docs/api-and-credentials.md) · [Contributing](CONTRIBUTING.md) · [Darwin Docs](https://darwin.so/docs)

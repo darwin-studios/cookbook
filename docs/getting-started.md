@@ -18,7 +18,7 @@ Or run `python3 examples/python/general-assistant/main.py` from the cookbook roo
 
 Sign in to Darwin, open **Me → Developers**, create an application, then create a Search key. One server-side key per application/environment is enough; it cannot Act for a person. Keep it out of Git and browser bundles. The [Account API](https://darwin.so/docs/admin/account) also exposes application and key creation. No invitation code or event credit allotment has been announced.
 
-## 3. Communicate with your account
+## 3. Act with your account
 
 To try a selected route, use the example's OAuth command:
 

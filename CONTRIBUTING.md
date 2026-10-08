@@ -10,7 +10,9 @@ Use Node.js 20+ for the original contract suite. The maintained TypeScript examp
 npm test
 ```
 
-The optional `npm run check:live-search` calls Darwin's live Search API. It can fail when an external agent is unavailable; include the observed result in your pull request rather than replacing it with a simulated success.
+The optional `npm run check:live-search` calls Darwin's live Search API. It fails on API or contract errors and reports provider availability separately; include the observed result in your pull request rather than replacing it with a simulated success.
+
+`npm run check:live-examples` runs all six maintained starters against production Search and saves transcripts outside the repository. `npm run check:live-continuation` verifies follow-ups and the index connection link. These are read-only checks, not live Act proof.
 
 ## Add or change an example
 

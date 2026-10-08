@@ -6,8 +6,9 @@
 // Try once: node examples/ide-companion.mjs --once "verify SPF and DMARC"
 // Stream:   node examples/ide-companion.mjs --stream
 import { createInterface } from 'node:readline';
-import { run } from '../lib/flow.mjs';
+
 import { search } from '../lib/darwin.mjs';
+import { run } from '../lib/flow.mjs';
 import { ideSearchRequest, ideSuggestions, normalizeIdeContext } from '../lib/ide-context.mjs';
 
 const mode = process.argv[2] || '--stream';
@@ -17,7 +18,8 @@ const workArea = process.env.DARWIN_IDE_WORK_AREA || '';
 if (mode === '--act') {
   await run({
     title: 'Proactive IDE companion — reviewed agent request',
-    intro: 'Choose an eligible capability and explicitly approve its exact request. Nothing is sent by background discovery.',
+    intro:
+      'Choose an eligible capability and explicitly approve its exact request. Nothing is sent by background discovery.',
     initialTask: process.env.DARWIN_IDE_TASK || '',
     query: (task) => ideSearchRequest({ task, language, workArea }).query,
     objective: (task) => ideSearchRequest({ task, language, workArea }).objective,
@@ -26,10 +28,19 @@ if (mode === '--act') {
   try {
     const context = normalizeIdeContext({ task: process.argv[3], language, workArea });
     const request = ideSearchRequest(context);
-    const found = await search(request.query, { objective: request.objective, numResults: 8 });
+    const found = await search(request.query, { context: [{ type: 'text', text: request.objective }], maxResults: 8 });
     const suggestions = ideSuggestions(found, context);
-    console.log(JSON.stringify({ type: 'suggestions', ...context, outcome: found.outcome, suggestions,
-      ...(suggestions.length ? {} : { message: 'No sufficiently relevant agent in these results. Refine the task; no Act request was sent.' }) }));
+    console.log(
+      JSON.stringify({
+        type: 'suggestions',
+        ...context,
+        outcome: found.status,
+        suggestions,
+        ...(suggestions.length
+          ? {}
+          : { message: 'No sufficiently relevant agent in these results. Refine the task; no Act request was sent.' }),
+      }),
+    );
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
@@ -66,10 +77,20 @@ if (mode === '--act') {
     lastSearchAt = Date.now();
     try {
       const request = ideSearchRequest(context);
-      const found = await search(request.query, { objective: request.objective, numResults: 8 });
+      const found = await search(request.query, {
+        context: [{ type: 'text', text: request.objective }],
+        maxResults: 8,
+      });
       const suggestions = ideSuggestions(found, context);
-      emit({ type: 'suggestions', ...context, outcome: found.outcome, suggestions,
-        ...(suggestions.length ? {} : { message: 'No sufficiently relevant agent in these results. Refine the task; no Act request was sent.' }) });
+      emit({
+        type: 'suggestions',
+        ...context,
+        outcome: found.status,
+        suggestions,
+        ...(suggestions.length
+          ? {}
+          : { message: 'No sufficiently relevant agent in these results. Refine the task; no Act request was sent.' }),
+      });
     } catch (error) {
       lastFingerprint = '';
       emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });

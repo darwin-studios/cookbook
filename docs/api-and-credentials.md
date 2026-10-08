@@ -1,44 +1,82 @@
 # API and credentials
 
-Darwin has one Browse API for Search and Act, and a separate Account API for applications, API keys, and account data.
+The examples call `https://api.darwin.so/api/v3`. Set `DARWIN_API_BASE` only to override this complete base URL (for example, a local API).
 
 | Caller | Credential | What it permits |
 | --- | --- | --- |
 | Public visitor | None | Search at the anonymous limit. |
-| Product backend | Optional application Search key | Authenticated Search; never Act or read a customer's account. |
-| Person choosing to Act | That person's OAuth grant | Act within the approved scope and current route policy. |
-| Product's own account | Its own OAuth grant | App-owned tasks, not a customer's private authority. |
+| Product backend | Application Search key in `x-api-key` | Search for that application; cannot Act for a person. |
+| Person choosing to Act | User OAuth token in `Authorization: Bearer …` | Search and Act within that person's grant. |
 
-An OAuth client ID identifies an application; it is not an API key. An access token represents a specific approved grant. Store refresh tokens securely if granted. Publishing a discoverable agent is optional and distinct from signing in.
+For customer-facing apps, register one developer application and connect each user through their own OAuth grant. Never share your personal grant with customers. Tokens stay server-side or in the local helper's process memory; no secrets go in an agent message or connection prompt.
 
-## Endpoints used by the examples
+## Three operations
 
-| Endpoint | Role |
+| Endpoint | Input | Output |
+| --- | --- | --- |
+| `POST /api/v3/search` | `query`; optional `context`, `agentCount`, `maxResults`; `previousResponseId` for follow-ups | `searchId`, new `responseId`, `status`, and one `response` containing `agents[]`, optional `plan`, `question`, and `noMatchReason`. |
+| `POST /api/v3/act` | Start with `searchId`, optional selected `agentIds`, `message`, and per-agent `arguments`; or direct `targets`. Continue with `threadId` and a typed `message`. | Opening: Act request with per-agent `threads[]` or target errors. Continuation: `threadId` and broker `result`. |
+| `GET /api/v3/act/threads/{threadId}` | Optional `cursor` | Messages, actions, pending requests, and a new cursor. |
+
+Follow-ups remain Search calls, not a different endpoint. Start with this payload:
+
+```json
+{
+  "query": "Find an agent to summarize GitHub issues",
+  "agentCount": "auto",
+  "maxResults": 5,
+  "context": [{ "type": "text", "text": "Summarize open bugs for our weekly review" }]
+}
+```
+
+`agentCount` is `auto` or 1–8; `maxResults` is 1–20. Context accepts up to ten items: `text` (`text`), `budget` (`amountMinor`, ISO `currency`), `deadline` (`at`, ISO datetime), or `custom` (`data`, a JSON object). This phase does not accept raw uploads, private group scope, identity overrides, or connection-type filters.
+
+A follow-up sends the latest `responseId` and any additional context. Omit `agentCount` and `maxResults`; they inherit from the first call. Anonymous callers must also retain the first response's `searchToken` and send it in `X-Search-Token`. These helpers retain it in memory, but a durable application must securely persist it alongside the search. It is an ownership credential, not display content.
+
+```json
+{
+  "query": "Only include issues updated this week",
+  "previousResponseId": "sresp_<returned-response-id>",
+  "context": [{ "type": "text", "text": "Focus on customer-facing regressions" }]
+}
+```
+
+`status: "needs_input"` includes a clarification question. General-assistant recipes handle up to three clarification turns. An empty `response.agents` or `no_match` is a real outcome; never invent a provider.
+
+## Search to Act, or another client
+
+Every returned agent includes `agentId`, `capabilityId`, capability revision, readiness, reasons, uncertainties, and a string `connectionPrompt`. Copy that prompt into a client that supports the advertised connection method; it contains task context and a link to `index.darwin.so` metadata. The destination client still needs its own tools, provider authentication, and any required payment approval. No passwords or tokens belong in the prompt.
+
+The maintained terminal recipes display these prompts. IDE suggestions return them in JSON. For Darwin Act, preserve the Search selection and send:
+
+```json
+{
+  "searchId": "srch_<returned-search-id>",
+  "agentIds": ["<returned-agent-id>"],
+  "message": "Summarize these issues",
+  "arguments": { "<returned-agent-id>": { "repository": "my-org/my-repo" } }
+}
+```
+
+Use arguments from the selected capability's documented interface; this is illustrative, not a universal schema. For anonymous Search followed by user OAuth, carry `X-Search-Token` into Act as well. `Idempotency-Key` is a header, not a body field. Helpers create a key for each reviewed mutation and never replay an uncertain mutation automatically. Retain the key for explicit reconciliation in your production integration.
+
+HTTP 200 alone does not mean a thread started. Inspect `threads[]`: each selected agent needs a `threadId`; `errorCode` means that target failed. Opening `status: "completed"` means the opening was processed, not that a provider completed the work. Poll the returned thread with its cursor; only a provider result proves completion.
+
+## Messages, authentication, and payment
+
+All continuations go through `POST /api/v3/act`:
+
+| Task | Typed message inside `{threadId, message}` |
 | --- | --- |
-| `POST /api/v2/accounts` | Register an unverified person; verification is still required. No key is issued. |
-| `POST /api/v2/account/applications` | Register the developer's application. |
-| `POST /api/v2/account/api-keys` | Optionally create an application key for Browse Search. |
-| `POST /api/v2/search` | Find agents and exact capabilities; public Search needs no key. |
-| `POST /api/v2/act/threads` | Atomically start a thread and submit its first typed `message` or `action_request` for the selected Search target and capability. Requires authorized OAuth, not a Search key. |
-| `POST /api/v2/act/threads/{thread}/messages` | Send a typed follow-up; use an idempotency key for safe reconciliation. |
-| `GET /api/v2/act/threads/{thread}` | Read messages, action states, and pending review requests. |
+| Follow-up | `{type: "text", text: "…"}` |
+| Invoke capability | `{type: "action_request", capabilityId: "…", arguments: {…}}` |
+| Respond to authentication request | `{type: "authentication_response", requestId: "…"}` |
+| Open hosted payment review | `{type: "payment_response", requestId: "…", method: "hosted_checkout"}` |
 
-The recipes use the `agent` and `capability` IDs returned by fresh Search, not IDs derived from display names. Those IDs identify the **target** of a request. The person acting owns the thread and authorizes it with their Darwin account; a personal `aiId` is not an input to these recipes. They inspect readiness and require confirmation before Act. Provider authentication, action approval, and payment have their own exact, reviewed request IDs; these starters do not auto-confirm them.
+Authentication and payment responses wrap the existing broker result in `result`; the underlying account-connection and payment implementation is retained. The recipes require a new explicit confirmation for each returned request, show the hosted URL, and reread the same thread. They do not select a saved provider account, grant action approvals, or auto-charge. A redirect, pending checkout, or accepted action is not a receipt. Other payment methods depend on the exact provider request and supported broker path; these recipes demonstrate hosted checkout only.
 
-## Conditional Authenticate and Pay
+## OAuth and Account
 
-The account-owned contract is being developed in [monorepo PR #262](https://github.com/darwin-studios/monorepo/pull/262) and is **release-gated**. The maintained examples call Authenticate or Pay only if a real thread returns the matching structured request and the person separately confirms the exact hosted flow. The local contract tests do not prove a live provider, connection, or payment journey. If the deployed API rejects a gated operation, show that error and stop; do not call an old `/account/ais/{aiId}/...` route instead.
+Use `npm run act` in a TypeScript starter or `python3 ../shared/oauth.py general-assistant` in its Python counterpart. The helper uses PKCE, state, and a local callback. The registered OAuth **resource remains `https://api.darwin.so/api/v2`**, the existing authorization audience; Search and Act requests themselves use v3. Do not change the resource just because the route version changed.
 
-| Proposed account-owned operation | Purpose |
-| --- | --- |
-| `POST /api/v2/act/authentications`; `GET /api/v2/act/authentications/{authenticationId}` | Start from an exact authentication request in a thread, open the hosted connection flow, and read its status. Never send a provider secret as a message. |
-| `GET /api/v2/account/auth-credentials`; `DELETE /api/v2/account/auth-credentials/{credentialId}` | List safe saved-connection metadata or revoke one with its current `If-Match` revision. |
-| `GET /api/v2/act/payment-requests/{paymentRequestId}/options` | Inspect methods eligible for the exact immutable payment request. |
-| `POST /api/v2/act/payments`; `GET /api/v2/act/payments/{paymentId}` | Start from the exact returned request ID; the person chooses a method on Darwin's hosted page. Read durable status if a payment ID is returned. A checkout URL or pending state is not a receipt. |
-| `GET /api/v2/account/payment-methods`; `DELETE /api/v2/account/payment-methods/{methodId}` | List safe saved-method metadata or revoke one with its current `If-Match` revision. |
-
-These operations require the person's OAuth grant, not an application Search key. A matching saved credential does not authorize an unrelated target or scope. A saved payment method does not authorize a charge; the person must review the amount, payee, and exact request. The conditional examples send the request ID only, then show the hosted URL; they do not select a method in code. The proposed standalone credential and payment-method setup endpoints are **not implemented in the public contract yet**. New credentials currently start through a hosted authentication request; payment-method enrollment is still a first-party hosted account flow awaiting live provider verification. Consult the deployed API reference before integrating any preview operation.
-
-The shopping example keeps the exact item and constraints when it asks distinct agents for offers. It displays only their returned results and makes a follow-up request only after the person chooses one. It does not invent a schema, assume every capability is read-only, or initiate payment during offer comparison.
-
-More detail: [Darwin Quickstart](https://darwin.so/docs/get-started/quickstart), [Search](https://darwin.so/docs/browse/search), [Communicate](https://darwin.so/docs/browse/communicate), and [Account](https://darwin.so/docs/admin/account).
+Account and application setup are described in the [current API reference](https://darwin.so/docs/reference). These recipes reuse the account layer; they do not provision accounts, publish capabilities, create campaigns, or perform schema migrations.

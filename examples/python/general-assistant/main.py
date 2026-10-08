@@ -6,14 +6,16 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from shared.browse import choices, eligible, has_result, read_thread, review_pending, search, show_outcome, start_thread
+from shared.browse import DarwinError, show_search_details, choices, eligible, has_result, read_thread, review_pending, search_with_questions, show_outcome, start_thread
 
 
 def run():
     task = os.getenv("DARWIN_INITIAL_TASK") or input("What would you like to get done? ").strip()
     if not task:
         raise ValueError("Enter a task to search for")
-    results = choices(search(task, objective=task, numResults=5))
+    found = search_with_questions(task, maxResults=5)
+    results = choices(found)
+    show_search_details(found)
     print(f"\n{len(results)} matching capabilities")
     for index, item in enumerate(results, 1):
         status = item.get("readiness") if eligible(item) else item.get("threadUnavailableReason", "unavailable")
@@ -51,6 +53,6 @@ def run():
 if __name__ == "__main__":
     try:
         run()
-    except (ValueError, KeyError, IndexError, OSError) as error:
+    except (DarwinError, ValueError, KeyError, IndexError, OSError) as error:
         print(error, file=sys.stderr)
         sys.exit(1)
