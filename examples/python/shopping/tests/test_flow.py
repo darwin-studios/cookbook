@@ -18,14 +18,14 @@ class FlowTests(unittest.TestCase):
                 return {"body": FOUND}
             if call["path"] == "/act" and not call["body"].get("threadId"):
                 count += 1
-                return {"body": start_fixture(call["body"]["agentIds"][0], f"t{count}")}
+                return {"body": start_fixture(call["body"]["targets"][0]["agentId"], f"t{count}")}
             return {"body": {"cursor": "c2", "messages": [{"from": "darwin", "type": "result",
                     "content": [{"type": "text", "text": "Current offer"}], "data": {"price": 850}}], "actions": [], "requests": []}}
 
         answers = 'MacBook Air M4\nunder $900\n1,2\n{"query":"MacBook Air M4"}\nyes\n{"query":"MacBook Air M4"}\nyes\n'
         result, calls = run_example("shopping", answers, reply, token="test-only")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual([call["body"]["agentIds"][0] for call in calls if call["path"] == "/act" and not call["body"].get("threadId")], ["a", "b"])
+        self.assertEqual([call["body"]["targets"][0]["agentId"] for call in calls if call["path"] == "/act" and not call["body"].get("threadId")], ["a", "b"])
         self.assertFalse(any("/payments" in call["path"] for call in calls))
         self.assertIn("Current offer", result.stdout)
 
@@ -34,7 +34,7 @@ class FlowTests(unittest.TestCase):
             if call["path"] == "/search":
                 return {"body": FOUND}
             if call["path"] == "/act" and not call["body"].get("threadId"):
-                return {"body": start_fixture(call["body"]["agentIds"][0])}
+                return {"body": start_fixture(call["body"]["targets"][0]["agentId"])}
             return {"body": {"cursor": "c2", "messages": [], "actions": [], "requests": [{"type": "payment_request", "request": "p1", "status": "pending", "acceptedMethods": ["hosted_checkout"]}]}}
 
         answers = 'MacBook Air M4\nunder $900\n1\n{"query":"MacBook Air M4"}\nyes\nno\n'
@@ -50,10 +50,10 @@ class FlowTests(unittest.TestCase):
             if call["path"] == "/search":
                 return {"body": FOUND}
             if call["path"] == "/act" and not call["body"].get("threadId"):
-                return {"body": start_fixture(call["body"]["agentIds"][0])}
+                return {"body": start_fixture(call["body"]["targets"][0]["agentId"])}
             if call["path"] == "/act" and isinstance(call["body"]["message"], dict) and call["body"]["message"].get("type") == "text":
                 return {"body": {"status": "accepted"}}
-            if call["path"].startswith("/act/threads/t1"):
+            if call["path"].startswith("/act/requests/actreq_1?"):
                 reads += 1
                 if reads == 1:
                     return {"body": {"cursor": "c2", "messages": [{"from": "darwin", "type": "result", "content": [{"type": "text", "text": "Offer found"}], "data": {"price": 850}}], "actions": [], "requests": []}}
@@ -70,7 +70,7 @@ class FlowTests(unittest.TestCase):
         pays = [call for call in calls if call["path"] == "/act" and isinstance(call["body"]["message"], dict) and call["body"]["message"].get("type") == "payment_response"]
         self.assertEqual(len(pays), 1)
         self.assertEqual(pays[0]["body"]["message"]["requestId"], "pay-1")
-        self.assertEqual(pays[0]["body"]["message"]["method"], "hosted_checkout")
+        self.assertNotIn("method", pays[0]["body"]["message"])
         self.assertIn("Provider completed", result.stdout)
 
 

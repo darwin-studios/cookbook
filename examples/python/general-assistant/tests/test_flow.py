@@ -20,14 +20,14 @@ class FlowTests(unittest.TestCase):
             if call["path"] == "/search":
                 return {"body": FOUND}
             if call["path"] == "/act" and not call["body"].get("threadId"):
-                return {"body": started(call["body"]["agentIds"][0])}
+                return {"body": started(call["body"]["targets"][0]["agentId"])}
             return {"body": {"cursor": "c2", "messages": [{"from": "darwin", "type": "result",
                     "content": [{"type": "text", "text": "SPF present"}], "data": {"spf": True}}], "requests": [], "actions": []}}
         answers = 'Check SPF and DMARC\n1\na\n{"domain":"example.com"}\nyes\n'
         result, calls = run_example("general-assistant", answers, reply, token="test-only")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(calls[1]["body"]["agentIds"][0], "dns")
-        self.assertEqual(calls[1]["body"]["arguments"]["dns"], {"domain": "example.com"})
+        self.assertEqual(calls[1]["body"]["targets"][0]["agentId"], "dns")
+        self.assertEqual(calls[1]["body"]["targets"][0]["arguments"], {"domain": "example.com"})
         self.assertIn("SPF present", result.stdout)
 
     def test_authentication_requires_another_yes_then_resumes(self):
@@ -38,8 +38,8 @@ class FlowTests(unittest.TestCase):
             if call["path"] == "/search":
                 return {"body": FOUND}
             if call["path"] == "/act" and not call["body"].get("threadId"):
-                return {"body": started(call["body"]["agentIds"][0])}
-            if call["path"].startswith("/act/threads/t1"):
+                return {"body": started(call["body"]["targets"][0]["agentId"])}
+            if call["path"].startswith("/act/requests/actreq_1?"):
                 reads += 1
                 if reads == 1:
                     return {"body": {"cursor": "c2", "messages": [], "actions": [], "requests": [{"type": "authentication_request", "request": "auth-1", "status": "pending"}]}}

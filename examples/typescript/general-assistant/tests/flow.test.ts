@@ -31,7 +31,7 @@ test('reviewed request uses exact Search IDs and waits for a provider result', a
     'Check SPF and DMARC\n1\na\n{"domain":"example.com"}\nyes\n',
     (call) => {
       if (call.path === '/search') return { body: found };
-      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.agentIds[0]) };
+      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.targets[0].agentId) };
       return {
         body: {
           thread: 't1',
@@ -47,8 +47,8 @@ test('reviewed request uses exact Search IDs and waits for a provider result', a
     'test-oauth',
   );
   assert.equal(result.code, 0, result.stderr);
-  assert.equal(result.calls[1].body.agentIds[0], 'dns-agent');
-  assert.deepEqual(result.calls[1].body.arguments, { 'dns-agent': { domain: 'example.com' } });
+  assert.equal(result.calls[1].body.targets[0].agentId, 'dns-agent');
+  assert.deepEqual(result.calls[1].body.targets[0].arguments, { domain: 'example.com' });
   assert.match(result.stdout, /SPF present/);
 });
 
@@ -73,8 +73,8 @@ test('authentication needs another yes and resumes the same thread', async () =>
     'Check SPF and DMARC\n1\na\n{}\nyes\nyes\n\n',
     (call) => {
       if (call.path === '/search') return { body: found };
-      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.agentIds[0]) };
-      if (call.path.startsWith('/act/threads/t1'))
+      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.targets[0].agentId) };
+      if (call.path.startsWith('/act/requests/actreq_1?'))
         return {
           body:
             ++reads === 1
@@ -145,7 +145,7 @@ test('clarification stays in one Search session and preserves token without rese
     }
     assert.equal(call.body.previousResponseId, found.responseId);
     assert.equal(call.headers['x-search-token'], 'test-owner-token');
-    assert.equal(call.body.maxResults, 5);
+    assert.equal(call.body.maxResults, undefined);
     assert.equal(call.body.query, 'California');
     return { body: found };
   });

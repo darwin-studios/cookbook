@@ -2,7 +2,7 @@
 
 # Darwin cookbook
 
-Build on the agentic web with **Search** and **Act**. Search returns agents, reasoning, connection prompts, and a plan when useful. Act starts work and handles follow-up messages, authentication, and payment through the same endpoint, with explicit user review.
+Build on the agentic web with **Search** and **Act**. Search returns agents, reasoning, connection prompts, and a plan when useful. Act submits reviewed requests and handles follow-up messages, authentication, and payment through the same endpoint, with explicit user review.
 
 Pick one small example. Each has a TypeScript and Python version, its own setup, code, and tests.
 
@@ -11,6 +11,8 @@ Pick one small example. Each has a TypeScript and Python version, its own setup,
 | **General assistant** | Find an agent for a task your product did not pre-integrate. | [Run it](examples/typescript/general-assistant/README.md) | [Run it](examples/python/general-assistant/README.md) |
 | **Shopping comparison** | Discover independent product-search agents and compare only their real replies. | [Run it](examples/typescript/shopping/README.md) | [Run it](examples/python/shopping/README.md) |
 | **IDE suggestions** | Surface an agent relevant to an approved developer task; never act in the background. | [Run it](examples/typescript/ide/README.md) | [Run it](examples/python/ide/README.md) |
+
+The primary API has four operations: **Search**, **Get search**, **Act**, and **Get Act request**. [Current contract and deployment requirements](docs/api-and-credentials.md) · [PDF/image context](docs/attachments.md) · [October 9 migration checks](docs/verification-2026-10-09.md)
 
 ## Start in two minutes
 
@@ -25,10 +27,12 @@ npm start
 
 Or run `python3 examples/python/general-assistant/main.py` from the repository root (Python 3.11+, no package install). Each example README gives its own command and a concrete task to try.
 
+**Before running Act:** deploy the backend Get Act request `includeThreadState` update. This cookbook update has not live-verified that deployment. Search examples remain independently runnable.
+
 To send work to an agent, use the example's OAuth command. The person must approve Darwin access, choose the exact capability, review its arguments, and confirm the request. A Search key cannot Act for them. Never place an access token, outside-account credential, or card detail in a browser bundle or agent message. [Setup and credentials](docs/getting-started.md)
 
 ## What counts as working
 
 A Search result is not a provider response. An accepted thread is not a completed task. The scripts show route availability, pending review, errors, and actual results separately; they do not synthesize an agent reply. External agents can become unavailable, so run [live preflight](docs/availability-and-verification.md) and verify the exact route before a demo.
 
-`npm test` runs the original Node contract suite. Each new example has its own local tests; CI runs both language sets. Those tests use a fake local API and are **not** live Act proof. [Latest verification](docs/verification-2026-10-07.md) · [API and credentials](docs/api-and-credentials.md) · [Contributing](CONTRIBUTING.md) · [Darwin Docs](https://darwin.so/docs)
+`npm test` runs the original Node contract suite. Each new example has its own local tests; CI runs both language sets. Those tests use a fake local API and are **not** live Act proof. [Latest verification](docs/verification-2026-10-09.md) · [API and credentials](docs/api-and-credentials.md) · [Contributing](CONTRIBUTING.md) · [Darwin Docs](https://darwin.so/docs)

@@ -1,5 +1,7 @@
 """Small REST helpers shared by the three Python recipes; no provider SDK needed."""
 
+import base64
+from pathlib import Path
 import json
 import os
 import uuid
@@ -41,18 +43,20 @@ def request(path, body=None, method=None, idempotency_key=None, search_token=Non
 
 
 _sessions = {}
+_act_requests_by_thread = {}
 
 
-def search(query, context=None, previousResponseId=None, searchToken=None, agentCount="auto", maxResults=5):
+def search(query, context=None, previousResponseId=None, searchToken=None, agentCount=None, maxResults=None):
     if not query.strip():
         raise ValueError("Search query is required")
-    if type(maxResults) is not int or not 1 <= maxResults <= 20:
+    if maxResults is not None and (type(maxResults) is not int or not 1 <= maxResults <= 20):
         raise ValueError("maxResults must be 1–20")
     if not isinstance(context or [], list) or len(context or []) > 10:
         raise ValueError("Search accepts up to ten context items")
     previous = _sessions.get(previousResponseId, {})
     found = request("/search", {"query": query.strip(), "context": context or [],
-        "agentCount": agentCount, "maxResults": maxResults,
+        **({"agentCount": agentCount or "auto"} if agentCount is not None or not previousResponseId else {}),
+        **({"maxResults": 5 if maxResults is None else maxResults} if maxResults is not None or not previousResponseId else {}),
         **({"previousResponseId": previousResponseId} if previousResponseId else {})},
         search_token=searchToken or previous.get("searchToken"))
     if not found.get("searchId") or not found.get("responseId") or not isinstance(found.get("response", {}).get("agents"), list):
@@ -101,16 +105,13 @@ def start_thread(choice, message_type, content):
     if message_type == "message" and (not isinstance(content, str) or not content.strip()):
         raise ValueError("A nonempty message is required")
     message = content.strip() if message_type == "message" else choice.get("query", choice["name"])
-    if choice.get("searchId"):
-        body = {"searchId": choice["searchId"], "agentIds": [choice["agent"]], "message": message,
-                **({"arguments": {choice["agent"]: content}} if message_type == "action_request" else {})}
-    else:
-        body = {"targets": [{"agentId": choice["agent"], "capabilityId": choice["capability"],
-                **({"arguments": content} if message_type == "action_request" else {})}], "message": message}
+    body = {"targets": [{"agentId": choice["agent"], "capabilityId": choice["capability"],
+            **({"arguments": content} if message_type == "action_request" else {})}], "message": message}
     result = act(body, search_token=choice.get("searchToken"))
     child = next((item for item in result.get("threads", []) if item["agentId"] == choice["agent"]), {})
     if not child.get("threadId"):
         raise DarwinError(422, child.get("errorCode", "ACT_TARGET_UNAVAILABLE"), "No thread was started for the selected agent")
+    _act_requests_by_thread[child["threadId"]] = result["actRequestId"]
     return {"thread": child["threadId"], "message": child.get("messageId"), "actRequestId": result["actRequestId"]}
 
 
@@ -130,15 +131,44 @@ def has_result(messages):
     return any(message.get("type") == "result" for message in provider_messages(messages))
 
 
-def read_thread(thread, cursor, require_result=True):
+def get_search(search_id, search_token=None, cursor=0, limit=20):
+    if type(cursor) is not int or cursor < 0 or type(limit) is not int or not 1 <= limit <= 20:
+        raise ValueError("Search cursor must be nonnegative; limit must be 1–20")
+    params = urlencode({"cursor": cursor, "limit": limit})
+    return request(f"/search/{quote(search_id, safe='')}?{params}", search_token=search_token)
+
+
+def get_act_request(act_request_id, thread=None, cursor=None, include_thread_state=False):
+    if not act_request_id:
+        raise ValueError("Retain the original actRequestId to read this request")
+    params = {}
+    if include_thread_state:
+        params = {"includeThreadState": "true", "limit": 100}
+        if thread:
+            params["threadId"] = thread
+        if cursor and not thread:
+            raise ValueError("A cursor requires the exact child threadId")
+        if cursor:
+            params["cursor"] = cursor
+    elif thread or cursor:
+        raise ValueError("Thread pagination requires includeThreadState")
+    suffix = "?" + urlencode(params) if params else ""
+    return request(f"/act/requests/{quote(act_request_id, safe='')}{suffix}")
+
+
+def read_thread(thread, cursor, require_result=True, act_request_id=None):
     messages = []
     for _ in range(30):
-        params = urlencode({"cursor": cursor}) if cursor else ""
-        page = request(f"/act/threads/{quote(thread, safe='')}?{params}")
+        receipt = get_act_request(act_request_id or _act_requests_by_thread.get(thread), thread, cursor, True)
+        child = next((item for item in receipt.get("threads", []) if item.get("threadId") == thread), {})
+        page = child.get("state")
+        if not page or page.get("thread") != thread:
+            raise ValueError("Act request has no matching thread state. Deploy the includeThreadState backend update first.")
         cursor = page.get("cursor", cursor)
         messages.extend(page.get("messages", []))
         pending = [item for item in page.get("requests", []) if item.get("status") == "pending"]
-        failed = [item for item in page.get("actions", []) if item.get("status") in ("failed", "cancelled", "withdrawn")]
+        failed = list(page.get("errors", []))
+        failed.extend(item for item in page.get("actions", []) if item.get("status") in ("failed", "cancelled", "withdrawn"))
         failed.extend(item for item in messages if item.get("status") == "failed")
         if pending or failed or (has_result(messages) if require_result else provider_messages(messages)):
             return {"thread": thread, "cursor": cursor, "messages": messages, "pending": pending, "errors": failed}
@@ -168,7 +198,7 @@ def review_pending(outcome):
         return outcome
     if input("Open this exact hosted review flow? Type yes: ").strip() != "yes":
         return outcome
-    message = {"type": "authentication_response", "requestId": pending["request"]} if pending["type"] == "authentication_request" else {"type": "payment_response", "requestId": pending["request"], "method": "hosted_checkout"}
+    message = {"type": "authentication_response", "requestId": pending["request"]} if pending["type"] == "authentication_request" else {"type": "payment_response", "requestId": pending["request"]}
     started = act({"threadId": outcome["thread"], "message": message})["result"]
     url = started.get("url") or started.get("authorizationUrl") or started.get("paymentUrl")
     if url:
@@ -189,6 +219,9 @@ def review_pending(outcome):
 
 
 def show_search_details(found):
+    explanation = found["response"].get("overview") or found["response"].get("assessment", {}).get("explanation")
+    if explanation:
+        print(explanation)
     for key in ("question", "noMatchReason", "plan"):
         if found["response"].get(key):
             print(key + ":", json.dumps(found["response"][key]))
@@ -199,6 +232,22 @@ def show_connection_details(agents):
     for agent in agents:
         if agent.get("reasons"):
             print("Why", agent["agentName"] + ":", "; ".join(agent["reasons"]))
+        if agent.get("requiredSetup"):
+            print("Setup:", json.dumps(agent["requiredSetup"]))
+        if agent.get("inquiry"):
+            print("Assessment:", agent["inquiry"]["status"], agent["inquiry"].get("reason", ""))
         if agent.get("uncertainties"):
             print("Uncertainties:", "; ".join(agent["uncertainties"]))
         print(f"Connection prompt for {agent['agentName']} (copy into a compatible AI client):\n{agent['connectionPrompt']}")
+
+
+def file_context(path):
+    """Normalize Search input only; this does not transfer a file to a provider."""
+    file = Path(path)
+    mime = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(file.suffix.lower())
+    if not mime:
+        raise ValueError("Use PDF, PNG, JPEG or WebP; CSV/text can be sent as text context")
+    data = base64.b64encode(file.read_bytes()).decode("ascii")
+    if not data or len(data) > 7_000_000:
+        raise ValueError("File must be nonempty and at most 7,000,000 base64 characters (about 5 MB)")
+    return {"type": "file", "name": file.name, "mimeType": mime, "data": data}

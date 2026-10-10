@@ -12,7 +12,10 @@ export async function runExample(folder: string, answers: string, respond: (call
     calls.push(call);
     const result = respond(call);
     response.writeHead(result.status || 200, { 'Content-Type': 'application/json' });
-    response.end(JSON.stringify(result.body || {}));
+    const url = new URL(call.path, 'http://fixture');
+    const body = call.method === 'GET' && url.pathname.startsWith('/act/requests/') && (!result.status || result.status === 200)
+      ? { type: 'request', actRequestId: 'actreq_1', threads: [{ agentId: 'fixture', threadId: url.searchParams.get('threadId'), state: { thread: url.searchParams.get('threadId'), ...result.body } }] } : result.body;
+    response.end(JSON.stringify(body || {}));
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');

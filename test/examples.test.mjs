@@ -20,7 +20,11 @@ async function runWithFakeDarwin(script, answers, respond, { token } = {}) {
     calls.push(call);
     const result = respond(call, calls);
     response.writeHead(result.status || 200, { 'Content-Type': 'application/json' });
-    response.end(JSON.stringify(result.body));
+    const url = new URL(call.path, 'http://fixture');
+    const responseBody = call.method === 'GET' && url.pathname.startsWith('/act/requests/') && result.status !== 403
+      ? { ...started('fixture', url.searchParams.get('threadId')), threads: [{ agentId: 'fixture', threadId: url.searchParams.get('threadId'), state: { thread: url.searchParams.get('threadId'), ...result.body } }] }
+      : result.body;
+    response.end(JSON.stringify(responseBody));
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -91,7 +95,7 @@ test('assistant example uses exact Search IDs and prints only a provider result 
           ]),
         };
       if (call.path === '/act' && !call.body.threadId) return { body: started('dns-agent', 'thread-1') };
-      if (call.path.startsWith('/act/threads/thread-1'))
+      if (call.path.startsWith('/act/requests/actreq_1?'))
         return {
           body: {
             thread: 'thread-1',
@@ -116,8 +120,8 @@ test('assistant example uses exact Search IDs and prints only a provider result 
   assert.equal(result.code, 0, result.stderr);
   assert.equal(result.calls.length, 3);
   assert.equal(result.calls[1].authorization, 'Bearer test-only-token');
-  assert.deepEqual(result.calls[1].body.arguments, { 'dns-agent': { domain: 'example.com' } });
-  assert.equal(result.calls[1].body.agentIds[0], 'dns-agent');
+  assert.deepEqual(result.calls[1].body.targets[0].arguments, { domain: 'example.com' });
+  assert.equal(result.calls[1].body.targets[0].agentId, 'dns-agent');
   assert.match(result.stdout, /Provider: SPF present/);
   assert.match(result.stdout, /"spf": "present"/);
 });
@@ -144,11 +148,11 @@ test('shopping example compares two distinct provider results without a purchase
       if (call.path === '/act' && !call.body.threadId)
         return {
           body: started(
-            call.body.agentIds[0],
+            call.body.targets[0].agentId,
             `thread-${calls.filter((entry) => entry.path === '/act' && !entry.body.threadId).length}`,
           ),
         };
-      if (call.path.startsWith('/act/threads/thread-'))
+      if (call.path.startsWith('/act/requests/actreq_1?'))
         return {
           body: {
             cursor: 'cursor-2',
@@ -171,7 +175,7 @@ test('shopping example compares two distinct provider results without a purchase
   );
   assert.equal(result.code, 0, result.stderr);
   assert.deepEqual(
-    result.calls.filter((call) => call.path === '/act' && !call.body.threadId).map((call) => call.body.agentIds[0]),
+    result.calls.filter((call) => call.path === '/act' && !call.body.threadId).map((call) => call.body.targets[0].agentId),
     ['shop-a', 'shop-b'],
   );
   assert.equal(result.calls.filter((call) => call.path === '/act' && !call.body.threadId).length, 2);

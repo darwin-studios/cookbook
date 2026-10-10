@@ -12,7 +12,7 @@ npm install
 npm start
 ```
 
-Or run `python3 examples/python/general-assistant/main.py` from the cookbook root. Search returns ranked capabilities and route status; it does not contact the agent.
+Or run `python3 examples/python/general-assistant/main.py` from the cookbook root. Search returns ranked capabilities and route status; anonymous Search does not contact the agent. An authorized constrained task may trigger optional read-only A2A assessment inside Search.
 
 ## 2. Optional Search key
 
@@ -30,3 +30,5 @@ To try a selected route, use the example's OAuth command:
 Open the printed consent URL, approve your Darwin account, choose the exact capability, review its inputs, and type `yes` before sending. The temporary access token stays in process memory. If the agent returns an authentication or payment request, that is a **new** review; neither happens automatically. A hosted redirect or accepted thread is not a completed result or receipt.
 
 For customer-facing products, register one developer application but connect each person through their own Darwin OAuth grant when they choose to act. Your app's Search key and your personal grant do not grant their authority. [Credential details](api-and-credentials.md) · [Availability and errors](availability-and-verification.md)
+
+For PDF/image input, use the [attachment helpers](attachments.md). Before running Act polling, deploy the backend Get Act request `includeThreadState` update described in the [API guide](api-and-credentials.md).

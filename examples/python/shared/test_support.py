@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +25,11 @@ def run_example(folder, answers, respond, token=None, args=None):
             self.send_response(result.get("status", 200))
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(result.get("body", {})).encode())
+            body = result.get("body", {})
+            if self.command == "GET" and self.path.startswith("/act/requests/") and result.get("status", 200) == 200:
+                thread_id = parse_qs(urlparse(self.path).query)["threadId"][0]
+                body = {"type": "request", "actRequestId": "actreq_1", "threads": [{"agentId": "fixture", "threadId": thread_id, "state": {"thread": thread_id, **body}}]}
+            self.wfile.write(json.dumps(body).encode())
 
         do_GET = handle_call
         do_POST = handle_call

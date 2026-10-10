@@ -103,9 +103,9 @@ test(
         );
       } else if (request.url === '/act' && !body.threadId) {
         response.end(JSON.stringify(started('agent-1', 'thread-1')));
-      } else if (request.url.startsWith('/act/threads/thread-1')) {
+      } else if (request.url.startsWith('/act/requests/actreq_1?')) {
         response.end(
-          JSON.stringify({
+          JSON.stringify({ ...started('agent-1','thread-1'), threads: [{ agentId: 'agent-1', threadId: 'thread-1', state: { thread: 'thread-1',
             cursor: 'cursor-2',
             hasMore: false,
             actions: [],
@@ -117,7 +117,7 @@ test(
                 content: [{ type: 'text', text: 'SPF and DMARC checked by provider' }],
               },
             ],
-          }),
+          } }] }),
         );
       } else {
         response.writeHead(404).end();
@@ -152,7 +152,7 @@ test(
       assert.match(stdout, /SPF and DMARC checked by provider/);
       assert.equal(calls.length, 3);
       assert.equal(calls[1].authorization, 'Bearer test-oauth-token');
-      assert.deepEqual(calls[1].body.arguments, { 'agent-1': {} });
+      assert.deepEqual(calls[1].body.targets[0].arguments, {});
     } finally {
       child.kill();
       await new Promise((done) => server.close(done));

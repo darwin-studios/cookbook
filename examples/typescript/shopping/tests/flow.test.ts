@@ -23,7 +23,7 @@ test('compares only two returned provider results and never invokes Pay', async 
     answers,
     (call) => {
       if (call.path === '/search') return { body: found };
-      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.agentIds[0], `t${++threads}`) };
+      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.targets[0].agentId, `t${++threads}`) };
       return {
         body: {
           cursor: 'c2',
@@ -44,7 +44,7 @@ test('compares only two returned provider results and never invokes Pay', async 
   );
   assert.equal(result.code, 0, result.stderr);
   assert.deepEqual(
-    result.calls.filter((call) => call.path === '/act' && !call.body.threadId).map((call) => call.body.agentIds[0]),
+    result.calls.filter((call) => call.path === '/act' && !call.body.threadId).map((call) => call.body.targets[0].agentId),
     ['shop-a', 'shop-b'],
   );
   assert.equal(
@@ -61,7 +61,7 @@ test('a payment request requires a separate yes and never auto-charges', async (
     answers,
     (call) => {
       if (call.path === '/search') return { body: found };
-      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.agentIds[0]) };
+      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.targets[0].agentId) };
       return {
         body: {
           cursor: 'c2',
@@ -91,9 +91,9 @@ test('after comparing, a selected agent can enter one reviewed hosted payment fl
     answers,
     (call) => {
       if (call.path === '/search') return { body: found };
-      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.agentIds[0]) };
+      if (call.path === '/act' && !call.body.threadId) return { body: started(call.body.targets[0].agentId) };
       if (call.path === '/act' && call.body.message?.type === 'text') return { body: { status: 'accepted' } };
-      if (call.path.startsWith('/act/threads/t1'))
+      if (call.path.startsWith('/act/requests/actreq_1?'))
         return {
           body:
             ++reads === 1
@@ -156,6 +156,6 @@ test('after comparing, a selected agent can enter one reviewed hosted payment fl
   const pays = result.calls.filter((call) => call.path === '/act' && call.body.message?.type === 'payment_response');
   assert.equal(pays.length, 1);
   assert.equal(pays[0].body.message.requestId, 'pay-1');
-  assert.equal(pays[0].body.message.method, 'hosted_checkout');
+  assert.equal(pays[0].body.message.method, undefined);
   assert.match(result.stdout, /Provider completed/);
 });

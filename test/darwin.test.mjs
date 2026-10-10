@@ -73,7 +73,7 @@ test('Search rejects invalid result count and malformed response', async () => {
   await assert.rejects(search('x', { maxResults: 21 }), /1–20/);
   await assert.rejects(search('x', { fetchImpl: async () => ok({ agents: [] }) }), /Invalid Search response/);
 });
-test('Search-to-Act uses searchId, exact selected agent, arguments and header idempotency', async () =>
+test('Search-to-Act preserves exact capability selection and header idempotency', async () =>
   withToken(async () => {
     const choice = { ...choices(found([{}]))[0], query: 'Check DNS' };
     const r = await startThread(choice, {
@@ -84,10 +84,8 @@ test('Search-to-Act uses searchId, exact selected agent, arguments and header id
         assert.match(u, /\/v3\/act$/);
         assert.equal(o.headers['Idempotency-Key'], 'attempt-1');
         assert.deepEqual(JSON.parse(o.body), {
-          searchId,
-          agentIds: ['dns-agent'],
+          targets: [{ agentId: 'dns-agent', capabilityId: 'check-dns', arguments: { domain: 'example.com' } }],
           message: 'Check DNS',
-          arguments: { 'dns-agent': { domain: 'example.com' } },
         });
         return ok(started());
       },
@@ -181,11 +179,17 @@ test('mutations never replay an uncertain delivery', async () =>
   }));
 test('GET thread uses cursor and no unsupported wait parameter', async () => {
   await getThread('t1', {
+    actRequestId: 'actreq_1',
     cursor: 'c:1',
     wait: true,
     fetchImpl: async (u) => {
-      assert.match(u, /\/act\/threads\/t1\?cursor=c%3A1$/);
-      return ok({ messages: [], requests: [] });
+      const url = new URL(u);
+      assert.equal(url.pathname, '/api/v3/act/requests/actreq_1');
+      assert.equal(url.searchParams.get('threadId'), 't1');
+      assert.equal(url.searchParams.get('includeThreadState'), 'true');
+      assert.equal(url.searchParams.get('cursor'), 'c:1');
+      assert.equal(url.searchParams.has('wait'), false);
+      return ok({ threads: [{ threadId: 't1', state: { thread: 't1', messages: [], requests: [] } }] });
     },
   });
 });
@@ -206,7 +210,7 @@ test('pending auth and payment use typed Act continuation and preserve receipt',
           assert.equal(b.threadId, 't1');
           assert.equal(b.message.requestId, 'request-1');
           assert.equal(b.message.type, type === 'payment_request' ? 'payment_response' : 'authentication_response');
-          if (type === 'payment_request') assert.equal(b.message.method, 'hosted_checkout');
+          if (type === 'payment_request') assert.equal(b.message.method, undefined);
           return ok({ type: 'continuation', threadId: 't1', result: { status: 'denied' } });
         };
         await reviewPending({ ask: async () => 'yes' }, { thread: 't1', pending: [{ type, request: 'request-1' }] });
@@ -219,7 +223,7 @@ test('thread reads stop on pending review or failed actions', async () => {
   const old = globalThis.fetch;
   try {
     globalThis.fetch = async () =>
-      ok({ cursor: 'c2', messages: [], actions: [{ action: 'a1', status: 'failed' }], requests: [] });
+      ok({ threads: [{ threadId: 't1', state: { thread: 't1', cursor: 'c2', messages: [], actions: [{ action: 'a1', status: 'failed' }], requests: [] } }] });
     const r = await readThread('t1');
     assert.equal(r.errors[0].code, 'ACTION_FAILED');
   } finally {
