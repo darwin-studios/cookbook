@@ -2,21 +2,19 @@
 
 # Darwin cookbook
 
-Build on the agentic web with **Search** and **Act**. Search returns agents, reasoning, connection prompts, and a plan when useful. Act submits reviewed requests and handles follow-up messages, authentication, and payment through the same endpoint, with explicit user review.
+Use Darwin Search to find an AI capability for a task your application was not built to handle. Search gives you ranked results, exact capability identifiers, setup information, protocol hints, and a connection prompt for a compatible AI client. You can build a useful discovery and handoff experience without calling Act.
 
-Pick one small example. Each has a TypeScript and Python version, its own setup, code, and tests.
+## Choose a Search example
 
-| Example | Why Darwin matters | TypeScript | Python |
+Each example has a TypeScript and Python version. Search does not send work to the provider.
+
+| Example | What you build | TypeScript | Python |
 | --- | --- | --- | --- |
-| **General assistant** | Find an agent for a task your product did not pre-integrate. | [Run it](examples/typescript/general-assistant/README.md) | [Run it](examples/python/general-assistant/README.md) |
-| **Shopping comparison** | Discover independent product-search agents and compare only their real replies. | [Run it](examples/typescript/shopping/README.md) | [Run it](examples/python/shopping/README.md) |
-| **IDE suggestions** | Surface an agent relevant to an approved developer task; never act in the background. | [Run it](examples/typescript/ide/README.md) | [Run it](examples/python/ide/README.md) |
+| **General assistant** | Find a capability for a user's task and show how to connect. | [Run it](examples/typescript/general-assistant/README.md) | [Run it](examples/python/general-assistant/README.md) |
+| **Shopping comparison** | Discover product-search capabilities without inventing offers or prices. | [Run it](examples/typescript/shopping/README.md) | [Run it](examples/python/shopping/README.md) |
+| **IDE suggestions** | Suggest a capability from a developer-approved task summary. | [Run it](examples/typescript/ide/README.md) | [Run it](examples/python/ide/README.md) |
 
-The primary API has four operations: **Search**, **Get search**, **Act**, and **Get Act request**. [Current contract and deployment requirements](docs/api-and-credentials.md) · [PDF/image context](docs/attachments.md) · [October 9 migration checks](docs/verification-2026-10-09.md)
-
-## Start in two minutes
-
-Search is public at the anonymous limit. To try the general assistant:
+To try the general assistant:
 
 ```bash
 git clone https://github.com/darwin-studios/cookbook.git
@@ -25,14 +23,16 @@ npm install
 npm start
 ```
 
-Or run `python3 examples/python/general-assistant/main.py` from the repository root (Python 3.11+, no package install). Each example README gives its own command and a concrete task to try.
+Or run `python3 examples/python/general-assistant/main.py` from the repository root (Python 3.11+, no package install). An empty result is valid: show Search's question or no-match explanation and let the person refine the task. Do not fill the list with unverified agents.
 
-**Before running Act:** deploy the backend Get Act request `includeThreadState` update. This cookbook update has not live-verified that deployment. Search examples remain independently runnable.
+## After Search
 
-To send work to an agent, use the example's OAuth command. The person must approve Darwin access, choose the exact capability, review its arguments, and confirm the request. A Search key cannot Act for them. Never place an access token, outside-account credential, or card detail in a browser bundle or agent message. [Setup and credentials](docs/getting-started.md)
+Read [Get started](docs/getting-started.md) for the complete Search flow and [Use a Search result](docs/using-search-results.md) for the handoff. The latter explains MCP, A2A, and WebMCP; what authentication and payment metadata can tell you; and what your client needs to verify before contacting a provider.
 
-## What counts as working
+The [API guide](docs/api-and-credentials.md) explains Search credentials, follow-ups, and response fields. [PDF and image context](docs/attachments.md) is available when text is not enough.
 
-A Search result is not a provider response. An accepted thread is not a completed task. The scripts show route availability, pending review, errors, and actual results separately; they do not synthesize an agent reply. External agents can become unavailable, so run [live preflight](docs/availability-and-verification.md) and verify the exact route before a demo.
+## Act preview
 
-`npm test` runs the original Node contract suite. Each new example has its own local tests; CI runs both language sets. Those tests use a fake local API and are **not** live Act proof. [Latest verification](docs/verification-2026-10-09.md) · [API and credentials](docs/api-and-credentials.md) · [Contributing](CONTRIBUTING.md) · [Darwin Docs](https://darwin.so/docs)
+The terminal examples also have an optional, separately reviewed Act path. It uses the person's Darwin OAuth grant, asks them to select the exact capability and inputs, and reads the resulting thread. A started thread is not a completed task. See [Act preview](docs/api-and-credentials.md#act-preview) and [availability checks](docs/availability-and-verification.md) if you are evaluating that path. The Search examples and direct client handoff stand on their own.
+
+Run `npm test` for the original Node contract suite. Each maintained example has local tests; [live Search preflight](docs/availability-and-verification.md) calls production Search without contacting providers. [Contributing](CONTRIBUTING.md) · [Darwin Docs](https://darwin.so/docs)
